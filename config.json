@@ -13,7 +13,7 @@
     "BOTTOM": ["Jhin", "Draven", "Caitlyn"],
     "UTILITY": ["Yuumi", "Blitzcrank", "Leona"]
   },
-  "preferred_roles": ["MIDDLE", "TOP"],
+  "preferred_role": "middle",
   "pick_order_coordinates_first_click": {
     "position_1": { "x": 74, "y": 152 },
     "position_2": { "x": 74, "y": 232 },

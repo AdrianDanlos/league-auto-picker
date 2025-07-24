@@ -6,7 +6,7 @@ import urllib3
 import psutil
 import re
 
-# Add pyautogui for click simulation (install with: pip install pyautogui)
+# Add pyautogui for click simulation
 import pyautogui
 
 # Disable warnings for self-signed certs
@@ -64,13 +64,14 @@ def get_assigned_lane(session):
 
 def get_pick_order(session, cell_id):
     """
-    Returns the pick order (1-based index) for the given cell_id based on the pick actions.
+    Returns the pick order (1-based index) for the given cell_id based on your team's pick actions.
     """
     actions = session.get("actions", [])
+    my_team_cell_ids = {p["cellId"] for p in session.get("myTeam", [])}
     pick_order = 1
     for action_group in actions:
         for action in action_group:
-            if action["type"] == "pick":
+            if action["type"] == "pick" and action["actorCellId"] in my_team_cell_ids:
                 if action["actorCellId"] == cell_id:
                     return pick_order
                 pick_order += 1
@@ -89,25 +90,29 @@ def auto_role_swap(session, config):
         if participant.get("cellId") == my_cell_id:
             assigned_role = participant.get("assignedPosition")
             break
+    print("assigned_role:", assigned_role)
     if not assigned_role:
         print("[Role Swap] Could not determine assigned role.")
         return
-    preferred_roles = config.get("preferred_roles", [])
-    if assigned_role in preferred_roles:
+    preferred_role = config.get("preferred_role", "")
+    if assigned_role == preferred_role:
         print(
-            f"[Role Swap] Assigned role '{assigned_role}' is in preferred roles. No swap needed."
+            f"[Role Swap] Assigned role '{assigned_role}' is your preferred role. No swap needed."
         )
         return
-    # Find a teammate with a preferred role
+    # Find a teammate with the preferred role
     swap_target = None
     for participant in my_team:
+        print("preferred_role", preferred_role)
+        print("participant.get(assignedPosition):", participant.get("assignedPosition"))
         if (
             participant.get("cellId") != my_cell_id
-            and participant.get("assignedPosition") in preferred_roles
+            and participant.get("assignedPosition") == preferred_role
         ):
             swap_target = participant
             break
     if not swap_target:
+        # FIXME: THIS EXCEPTION IS THROWN
         print("[Role Swap] No teammate found with a preferred role to swap.")
         return
     # Get pick order for both players
@@ -115,6 +120,11 @@ def auto_role_swap(session, config):
     target_pick_order = get_pick_order(session, swap_target["cellId"])
     if not target_pick_order:
         print("[Role Swap] Could not determine target's pick order.")
+        return
+    if not (1 <= target_pick_order <= 5):
+        print(
+            f"[Role Swap] Target pick order {target_pick_order} is not in 1-5 (your team). Skipping role swap."
+        )
         return
     coord_key = f"position_{target_pick_order}"
     coordinates1 = config.get("pick_order_coordinates_first_click", {}).get(coord_key)
@@ -147,13 +157,14 @@ def act_on_phase(session, base_url, auth):
         print("Could not determine assigned lane.")
         return
     print(f"Assigned lane: {assigned_lane}")
+    lane_key = assigned_lane.upper()
     for action_group in actions:
         for action in action_group:
             if action["actorCellId"] == my_cell_id and action["isInProgress"]:
                 champ_list = (
-                    config["bans"].get(assigned_lane, [])
+                    config["bans"].get(lane_key, [])
                     if action["type"] == "ban"
-                    else config["picks"].get(assigned_lane, [])
+                    else config["picks"].get(lane_key, [])
                 )
                 for champ in champ_list:
                     champ_id = CHAMPION_IDS.get(champ)
@@ -195,13 +206,23 @@ def auto_accept_queue(base_url, auth):
                         break
                     else:
                         print(f"❌ Failed to accept queue: {accept.status_code}")
-            time.sleep(1)
+            time.sleep(3)
         except Exception as e:
             print("[Queue Accept Error]", e)
             time.sleep(5)
 
 
 if __name__ == "__main__":
+    import pygetwindow as gw
+
+    # Try to find the League client window (the title may vary, adjust if needed)
+    windows = gw.getWindowsWithTitle("League of Legends")
+    if windows:
+        win = windows[0]
+        print(f"Client position: ({win.left}, {win.top})")
+        print(f"Client size: {win.width}x{win.height}")
+    else:
+        print("League client window not found.")
     port, token = get_lcu_credentials()
     base_url = f"https://127.0.0.1:{port}"
     auth = requests.auth.HTTPBasicAuth("riot", token)
@@ -213,6 +234,7 @@ if __name__ == "__main__":
         try:
             session = get_session(base_url, auth)
             if session:
+                auto_role_swap(session, config)
                 act_on_phase(session, base_url, auth)
             time.sleep(1)
         except Exception as e:
