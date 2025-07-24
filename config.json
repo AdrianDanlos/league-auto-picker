@@ -1,0 +1,31 @@
+{
+  "bans": {
+    "TOP": ["Darius"],
+    "JUNGLE": ["Lee Sin"],
+    "MIDDLE": ["Yasuo"],
+    "BOTTOM": ["Draven"],
+    "UTILITY": ["Yuumi"]
+  },
+  "picks": {
+    "TOP": ["Galio", "Sett", "Garen"],
+    "JUNGLE": ["Lee Sin", "Elise", "Warwick"],
+    "MIDDLE": ["Ahri", "Syndra", "Annie"],
+    "BOTTOM": ["Jhin", "Draven", "Caitlyn"],
+    "UTILITY": ["Yuumi", "Blitzcrank", "Leona"]
+  },
+  "preferred_roles": ["MIDDLE", "TOP"],
+  "pick_order_coordinates_first_click": {
+    "position_1": { "x": 74, "y": 152 },
+    "position_2": { "x": 74, "y": 232 },
+    "position_3": { "x": 74, "y": 312 },
+    "position_4": { "x": 74, "y": 390 },
+    "position_5": { "x": 74, "y": 470 }
+  },
+  "pick_order_coordinates_second_click": {
+    "position_1": { "x": 154, "y": 182 },
+    "position_2": { "x": 154, "y": 262 },
+    "position_3": { "x": 154, "y": 342 },
+    "position_4": { "x": 154, "y": 420 },
+    "position_5": { "x": 154, "y": 500 }
+  }
+}
