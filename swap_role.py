@@ -2,6 +2,7 @@
 import pyautogui
 import time
 from utils import get_pick_order
+from utils import percent_to_absolute_coords
 
 
 def swap_role(session, config):
@@ -58,8 +59,9 @@ def swap_role(session, config):
     if not coordinates1 or not coordinates2:
         print(f"[Role Swap] No coordinates found for pick order {target_pick_order}.")
         return
-    x1, y1 = coordinates1["x"], coordinates1["y"]
-    x2, y2 = coordinates2["x"], coordinates2["y"]
+
+    x1, y1 = percent_to_absolute_coords(coordinates1["x"], coordinates1["y"])
+    x2, y2 = percent_to_absolute_coords(coordinates2["x"], coordinates2["y"])
 
     try:
         pyautogui.click(x1, y1)
