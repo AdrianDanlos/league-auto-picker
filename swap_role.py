@@ -60,15 +60,15 @@ def swap_role(session, config):
         return
     x1, y1 = coordinates1["x"], coordinates1["y"]
     x2, y2 = coordinates2["x"], coordinates2["y"]
-    print(
-        f"[Role Swap] Attempting to swap with {swap_target['assignedPosition']} "
-        f"at pick order {target_pick_order} (first click at {x1},{y1}, "
-        f"second click at {x2},{y2})"
-    )
+
     try:
         pyautogui.click(x1, y1)
         time.sleep(0.2)  # Small delay between clicks
         pyautogui.click(x2, y2)
-        print("[Role Swap] Two click actions performed.")
+        print(
+            f"[Role Swap] Swap with {swap_target['assignedPosition']} "
+            f"at pick order {target_pick_order} (first click at {x1},{y1}, "
+            f"second click at {x2},{y2})"
+        )
     except Exception as e:
         print(f"[Role Swap] Failed to perform clicks: {e}")

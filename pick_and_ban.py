@@ -26,7 +26,6 @@ def pick_and_ban(session, base_url, auth, config):
     if not assigned_lane:
         print("Could not determine assigned lane.")
         return
-    print(f"Assigned lane: {assigned_lane}")
     lane_key = assigned_lane.upper()
     for action_group in actions:
         for action in action_group:

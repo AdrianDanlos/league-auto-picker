@@ -5,6 +5,7 @@ import pyautogui
 import time
 from utils import get_pick_order
 
+
 def swap_pick_position(session, config):
     """
     Checks the current player's pick order and asks to swap with every player below them,
@@ -46,7 +47,9 @@ def swap_pick_position(session, config):
             print(f"[Pick Swap] Skipping TOP in 5th position (cellId {cell_id}).")
             continue
         coord_key = f"position_{pick_order}"
-        coordinates1 = config.get("swap_pick_position", {}).get("first_click", {}).get(coord_key)
+        coordinates1 = (
+            config.get("swap_pick_position", {}).get("first_click", {}).get(coord_key)
+        )
         coordinates2 = (
             config.get("swap_pick_position", {}).get("second_click", {}).get(coord_key)
         )
@@ -55,13 +58,13 @@ def swap_pick_position(session, config):
             continue
         x1, y1 = coordinates1["x"], coordinates1["y"]
         x2, y2 = coordinates2["x"], coordinates2["y"]
-        print(
-            f"[Pick Swap] Asking {assigned_position} at pick order {pick_order} (cellId {cell_id}) to swap."
-        )
+
         try:
             pyautogui.click(x1, y1)
             time.sleep(0.2)
             pyautogui.click(x2, y2)
-            print("[Pick Swap] Two click actions performed.")
+            print(
+                f"[Pick Swap] Asking {assigned_position} at pick order {pick_order} (cellId {cell_id}) to swap."
+            )
         except Exception as e:
             print(f"[Pick Swap] Failed to perform clicks for cellId {cell_id}: {e}")

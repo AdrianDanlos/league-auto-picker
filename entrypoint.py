@@ -51,7 +51,7 @@ def wait_for_champ_select(base_url, auth, config):
         session = get_session(base_url, auth)
         if session:
             print("🟢 Welcome to the Champ Select...")
-            time.sleep(7)  # wait for the champ select to load
+            time.sleep(4)  # wait for the champ select to load
         else:
             print("🔄 No session found. Retrying queue pop...")
     return session
@@ -81,14 +81,14 @@ if __name__ == "__main__":
     while True:
         try:
             if session:
+                 # Refresh session to get the latest state of the champ select
+                session = get_session(base_url, auth)
                 swap_pick_position(session, config)
                 pick_and_ban(session, base_url, auth, config)
-                # Refresh session to get the latest state of the champ select
-                session = get_session(base_url, auth)
             else:
                 session = wait_for_champ_select(base_url, auth, config)
 
-            time.sleep(10)
+            time.sleep(13)
         except Exception as e:
             print("[Error]", e)
             time.sleep(5)
