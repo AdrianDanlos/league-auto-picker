@@ -6,6 +6,8 @@ import urllib3
 import psutil
 import re
 
+from send_message import send_champ_select_message
+
 # Disable warnings for self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -29,19 +31,7 @@ def get_session(base_url, auth):
     return r.json() if r.status_code == 200 else None
 
 
-def print_league_client_window_info():
-    import pygetwindow as gw
-
-    windows = gw.getWindowsWithTitle("League of Legends")
-    if windows:
-        win = windows[0]
-        print(f"Client position: ({win.left}, {win.top})")
-        print(f"Client size: {win.width}x{win.height}")
-    else:
-        print("League client window not found.")
-
-
-def wait_for_champ_select(base_url, auth, config):
+def wait_for_champ_select(base_url, auth):
     session = None
     while not session:
         print("🟢 Waiting for queue pop...")
@@ -64,14 +54,13 @@ if __name__ == "__main__":
     from swap_role import swap_role
     from swap_pick_position import swap_pick_position
 
-    print_league_client_window_info()
-
     port, token = get_lcu_credentials()
     base_url = f"https://127.0.0.1:{port}"
     auth = requests.auth.HTTPBasicAuth("riot", token)
 
     # Wait for a valid session (champ select)
-    session = wait_for_champ_select(base_url, auth, config)
+    session = wait_for_champ_select(base_url, auth)
+    send_champ_select_message(session, base_url, auth, "Hi everyone, let's win this game!")
 
     # Only done once
     swap_role(session, config)
@@ -81,12 +70,12 @@ if __name__ == "__main__":
     while True:
         try:
             if session:
-                 # Refresh session to get the latest state of the champ select
+                # Refresh session to get the latest state of the champ select
                 session = get_session(base_url, auth)
                 swap_pick_position(session, config)
                 pick_and_ban(session, base_url, auth, config)
             else:
-                session = wait_for_champ_select(base_url, auth, config)
+                session = wait_for_champ_select(base_url, auth)
 
             time.sleep(13)
         except Exception as e:
