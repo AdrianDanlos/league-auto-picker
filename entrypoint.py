@@ -1,0 +1,70 @@
+# flake8: noqa: E501
+import requests
+import time
+import json
+import urllib3
+import psutil
+import re
+
+# Add pyautogui for click simulation
+import pyautogui
+
+# Disable warnings for self-signed certs
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# === Load config ===
+with open("config.json") as f:
+    config = json.load(f)
+
+def get_lcu_credentials():
+    for proc in psutil.process_iter(["cmdline"]):
+        if proc.info["cmdline"] and "LeagueClientUx.exe" in proc.info["cmdline"][0]:
+            cmdline = " ".join(proc.info["cmdline"])
+            port = re.search(r"--app-port=(\d+)", cmdline).group(1)
+            token = re.search(r"--remoting-auth-token=([\w-]+)", cmdline).group(1)
+            return port, token
+    raise RuntimeError("League client not found.")
+
+def get_session(base_url, auth):
+    r = requests.get(f"{base_url}/lol-champ-select/v1/session", auth=auth, verify=False)
+    return r.json() if r.status_code == 200 else None
+
+def print_league_client_window_info():
+    import pygetwindow as gw
+
+    windows = gw.getWindowsWithTitle("League of Legends")
+    if windows:
+        win = windows[0]
+        print(f"Client position: ({win.left}, {win.top})")
+        print(f"Client size: {win.width}x{win.height}")
+    else:
+        print("League client window not found.")
+
+
+if __name__ == "__main__":
+    import pygetwindow as gw
+    from auto_accept_queue import auto_accept_queue
+    from pick_and_ban import pick_and_ban
+    from auto_role_swap import auto_role_swap
+
+    print_league_client_window_info()
+
+    port, token = get_lcu_credentials()
+    base_url = f"https://127.0.0.1:{port}"
+    auth = requests.auth.HTTPBasicAuth("riot", token)
+
+    print("🟢 Waiting for queue pop...")
+    auto_accept_queue(base_url, auth)
+    print("🟢 Waiting for champ select...")
+    time.sleep(10) #wait for the champ select to load
+    session = get_session(base_url, auth)
+    auto_role_swap(session, config)
+    time.sleep(10) #wait until the role swap ends
+    while True:
+        try:
+            if session:
+                pick_and_ban(session, base_url, auth, config)
+            time.sleep(1)
+        except Exception as e:
+            print("[Error]", e)
+            time.sleep(5)
