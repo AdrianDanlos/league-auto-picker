@@ -6,9 +6,6 @@ import urllib3
 import psutil
 import re
 
-# Add pyautogui for click simulation
-import pyautogui
-
 # Disable warnings for self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -43,9 +40,10 @@ def print_league_client_window_info():
 
 if __name__ == "__main__":
     import pygetwindow as gw
-    from auto_accept_queue import auto_accept_queue
+    from accept_queue import accept_queue
     from pick_and_ban import pick_and_ban
-    from auto_role_swap import auto_role_swap
+    from swap_role import swap_role
+    from swap_pick_position import swap_pick_position
 
     print_league_client_window_info()
 
@@ -54,15 +52,16 @@ if __name__ == "__main__":
     auth = requests.auth.HTTPBasicAuth("riot", token)
 
     print("🟢 Waiting for queue pop...")
-    auto_accept_queue(base_url, auth)
+    accept_queue(base_url, auth)
     print("🟢 Waiting for champ select...")
     time.sleep(10) #wait for the champ select to load
     session = get_session(base_url, auth)
-    auto_role_swap(session, config)
+    swap_role(session, config)
     time.sleep(10) #wait until the role swap ends
     while True:
         try:
             if session:
+                swap_pick_position(session, config)
                 pick_and_ban(session, base_url, auth, config)
             time.sleep(1)
         except Exception as e:

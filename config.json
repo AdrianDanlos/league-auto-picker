@@ -29,5 +29,21 @@
       "position_4": { "x": 466, "y": 583 },
       "position_5": { "x": 466, "y": 662 }
     }
+  },
+  "swap_pick_position": {
+    "first_click": {
+      "position_1": { "x": 386, "y": 315 },
+      "position_2": { "x": 386, "y": 395 },
+      "position_3": { "x": 386, "y": 473 },
+      "position_4": { "x": 386, "y": 553 },
+      "position_5": { "x": 386, "y": 632 }
+    },
+    "second_click": {
+      "position_1": { "x": 466, "y": 315 },
+      "position_2": { "x": 466, "y": 395 },
+      "position_3": { "x": 466, "y": 473 },
+      "position_4": { "x": 466, "y": 553 },
+      "position_5": { "x": 466, "y": 632 }
+    }
   }
 }

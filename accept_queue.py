@@ -1,8 +1,9 @@
+# flake8: noqa: E501
 import requests
 import time
 
 
-def auto_accept_queue(base_url, auth):
+def accept_queue(base_url, auth):
     """Polls the ready-check endpoint and accepts the match if found."""
     while True:
         try:
