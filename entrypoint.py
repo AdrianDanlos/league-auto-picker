@@ -13,6 +13,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 with open("config.json") as f:
     config = json.load(f)
 
+
 def get_lcu_credentials():
     for proc in psutil.process_iter(["cmdline"]):
         if proc.info["cmdline"] and "LeagueClientUx.exe" in proc.info["cmdline"][0]:
@@ -22,9 +23,11 @@ def get_lcu_credentials():
             return port, token
     raise RuntimeError("League client not found.")
 
+
 def get_session(base_url, auth):
     r = requests.get(f"{base_url}/lol-champ-select/v1/session", auth=auth, verify=False)
     return r.json() if r.status_code == 200 else None
+
 
 def print_league_client_window_info():
     import pygetwindow as gw
@@ -36,6 +39,22 @@ def print_league_client_window_info():
         print(f"Client size: {win.width}x{win.height}")
     else:
         print("League client window not found.")
+
+
+def wait_for_champ_select(base_url, auth, config):
+    session = None
+    while not session:
+        print("🟢 Waiting for queue pop...")
+        accept_queue(base_url, auth)
+        print("🟢 Waiting for champ select...")
+        time.sleep(10)  # wait for everyone to accept the queue
+        session = get_session(base_url, auth)
+        if session:
+            print("🟢 Welcome to the Champ Select...")
+            time.sleep(7)  # wait for the champ select to load
+        else:
+            print("🔄 No session found. Retrying queue pop...")
+    return session
 
 
 if __name__ == "__main__":
@@ -51,19 +70,25 @@ if __name__ == "__main__":
     base_url = f"https://127.0.0.1:{port}"
     auth = requests.auth.HTTPBasicAuth("riot", token)
 
-    print("🟢 Waiting for queue pop...")
-    accept_queue(base_url, auth)
-    print("🟢 Waiting for champ select...")
-    time.sleep(10) #wait for the champ select to load
-    session = get_session(base_url, auth)
+    # Wait for a valid session (champ select)
+    session = wait_for_champ_select(base_url, auth, config)
+
+    # Only done once
     swap_role(session, config)
-    time.sleep(10) #wait until the role swap ends
+    time.sleep(10)  # wait until the role swap ends
+
+    # Main loop: only runs after a valid session is acquired
     while True:
         try:
             if session:
                 swap_pick_position(session, config)
                 pick_and_ban(session, base_url, auth, config)
-            time.sleep(1)
+                # Refresh session to get the latest state of the champ select
+                session = get_session(base_url, auth)
+            else:
+                session = wait_for_champ_select(base_url, auth, config)
+
+            time.sleep(10)
         except Exception as e:
             print("[Error]", e)
             time.sleep(5)

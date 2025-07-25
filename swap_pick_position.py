@@ -10,7 +10,7 @@ def swap_pick_position(session, config):
     Checks the current player's pick order and asks to swap with every player below them,
     starting from the 5th position (unless it's top), then 4th, 3rd, and 2nd.
     Only asks players below the current pick order, and skips asking top if they're in 5th position.
-    Simulates the swap request clicks using the config's swap_role coordinates.
+    Simulates the swap request clicks using the config's swap_pick_position coordinates.
     """
     my_cell_id = session.get("localPlayerCellId")
     my_team = session.get("myTeam", [])
@@ -46,9 +46,9 @@ def swap_pick_position(session, config):
             print(f"[Pick Swap] Skipping TOP in 5th position (cellId {cell_id}).")
             continue
         coord_key = f"position_{pick_order}"
-        coordinates1 = config.get("swap_role", {}).get("first_click", {}).get(coord_key)
+        coordinates1 = config.get("swap_pick_position", {}).get("first_click", {}).get(coord_key)
         coordinates2 = (
-            config.get("swap_role", {}).get("second_click", {}).get(coord_key)
+            config.get("swap_pick_position", {}).get("second_click", {}).get(coord_key)
         )
         if not coordinates1 or not coordinates2:
             print(f"[Pick Swap] No coordinates found for pick order {pick_order}.")
