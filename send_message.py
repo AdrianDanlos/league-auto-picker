@@ -2,7 +2,9 @@
 import requests
 
 
-def send_champ_select_message(session, base_url, auth, message):
+def send_champ_select_message(session, base_url, auth):
+    message = "Let's win this so hard they uninstall the game!"
+
     # Try to get the chatId from session
     chat_id = None
     if "chatDetails" in session:

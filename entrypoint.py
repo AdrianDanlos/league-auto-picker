@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     # Wait for a valid session (champ select)
     session = wait_for_champ_select(base_url, auth)
-    send_champ_select_message(session, base_url, auth, "Hi everyone, let's win this game!")
+    send_champ_select_message(session, base_url, auth)
 
     # Only done once
     swap_role(session, config)
