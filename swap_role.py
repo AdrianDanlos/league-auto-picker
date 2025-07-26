@@ -1,6 +1,5 @@
 # flake8: noqa: E501
 import requests
-import time
 import asyncio
 
 
