@@ -236,14 +236,12 @@ def swap_pick_position(base_url, auth):
             url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/request"
             try:
                 res = requests.post(url, auth=auth, verify=False)
-                if res.status_code == 200 or res.status_code == 204:
-                    print("🟢 res:", res)
-                    print("🟢 res.status_code:", res.status_code)
+                if res.status_code == 200:
                     print(
                         f"[Pick Swap] Successfully requested swap with {assigned_position} at pick order {pick_order} (cellId {cell_id}, swapId {swap_id})"
                     )
                     # Wait a bit after successful request to let it process
-                    time.sleep(5)
+                    time.sleep(3)
                 else:
                     print(
                         f"[Pick Swap] Failed to request swap: {res.status_code} {res.text}"
