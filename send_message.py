@@ -1,9 +1,23 @@
 # flake8: noqa: E501
 import requests
+import random
 
 
 def send_champ_select_message(session, base_url, auth):
-    message = "Let's win this so hard they uninstall the game!"
+    messages = [
+        "yo team let's run it up - we bout to diff these kids",
+        "sup team, time to gap them - this one's free",
+        "waddup squad, let's farm some LP real quick",
+        "ay team we finna smash these plebs no cap",
+        "yooo let's get this dub, bout to be ez clap",
+        "what's good team, time to int their mental fr",
+        "lesgooo team we bout to turbo stomp - free win",
+        "ay team let's cook these bots, gonna be a banger",
+        "yoo squad time to gap check - they're not ready",
+        "sup team we finna hard carry this lobby ngl",
+    ]
+
+    message = random.choice(messages)
 
     # Try to get the chatId from session
     chat_id = None
