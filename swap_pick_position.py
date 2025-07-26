@@ -109,7 +109,10 @@ def swap_pick_position(base_url, auth):
                                     decline_res = requests.post(
                                         decline_url, auth=auth, verify=False
                                     )
-                                    if decline_res.status_code == 204:
+                                    if (
+                                        decline_res.status_code == 200
+                                        or decline_res.status_code == 204
+                                    ):
                                         print(
                                             f"[Pick Swap] Declined incoming swap request from pick order {requester_pick_order} (above us)"
                                         )
@@ -123,7 +126,10 @@ def swap_pick_position(base_url, auth):
                                     accept_res = requests.post(
                                         accept_url, auth=auth, verify=False
                                     )
-                                    if accept_res.status_code == 204:
+                                    if (
+                                        accept_res.status_code == 200
+                                        or accept_res.status_code == 204
+                                    ):
                                         print(
                                             f"[Pick Swap] Accepted incoming swap request from pick order {requester_pick_order} (below us)"
                                         )
@@ -134,8 +140,12 @@ def swap_pick_position(base_url, auth):
             except Exception as e:
                 print(f"[Pick Swap] Failed to handle incoming swap requests: {e}")
 
+            # Small delay after handling incoming requests
+            time.sleep(1)
+
             # 1. Wait for any ongoing pick order swap to complete
-            while True:
+            wait_count = 0
+            while wait_count < 30:  # Wait up to 60 seconds
                 try:
                     ongoing_swap_url = (
                         f"{base_url}/lol-champ-select/v1/ongoing-pick-order-swap"
@@ -147,17 +157,24 @@ def swap_pick_position(base_url, auth):
                         ongoing_swap = ongoing_res.json()
                         if ongoing_swap:
                             print(
-                                "[Pick Swap] Waiting for ongoing pick order swap to complete..."
+                                f"[Pick Swap] Waiting for ongoing pick order swap to complete... ({wait_count + 1}/30)"
                             )
                             time.sleep(2)
+                            wait_count += 1
                             continue
                         else:
+                            print("[Pick Swap] No ongoing swap detected, proceeding...")
                             break  # No ongoing swap, proceed
                     else:
                         break  # Assume no ongoing swap if endpoint fails
                 except Exception as e:
                     print(f"[Pick Swap] Failed to check ongoing swap: {e}")
                     break  # Proceed anyway if we can't check
+
+            if wait_count >= 30:
+                print(
+                    "[Pick Swap] Timed out waiting for ongoing swap, proceeding anyway..."
+                )
 
             # 2. Re-fetch session and get your pick order
             try:
@@ -194,9 +211,6 @@ def swap_pick_position(base_url, auth):
 
             # 4. If no valid targets, break out of inner loop to reset and try again
             if not pick_orders:
-                print(
-                    "[Pick Swap] No valid swap targets found, will reset and try again."
-                )
                 break
 
             # 5. Pick the best target (highest pick order)
@@ -207,16 +221,14 @@ def swap_pick_position(base_url, auth):
             # 6. Find the correct swap ID from pickOrderSwaps
             pick_order_swaps = session.get("pickOrderSwaps", [])
             swap_id = None
+
+            # Find the swap that corresponds to our target cell ID
             for swap in pick_order_swaps:
-                # Look for a swap that involves both our cell id and the target cell id
-                if (swap.get("id") == my_cell_id and swap.get("cellId") == cell_id) or (
-                    swap.get("id") == cell_id and swap.get("cellId") == my_cell_id
-                ):
+                if swap.get("cellId") == cell_id:
                     swap_id = swap.get("id")
                     break
 
             if not swap_id:
-                print(f"[Pick Swap] No pick order swap found for cellId {cell_id}.")
                 attempted_cell_ids.add(cell_id)
                 continue
 
@@ -224,10 +236,12 @@ def swap_pick_position(base_url, auth):
             url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/request"
             try:
                 res = requests.post(url, auth=auth, verify=False)
-                if res.status_code == 204:
+                if res.status_code == 200 or res.status_code == 204:
                     print(
                         f"[Pick Swap] Successfully requested swap with {assigned_position} at pick order {pick_order} (cellId {cell_id}, swapId {swap_id})"
                     )
+                    # Wait a bit after successful request to let it process
+                    time.sleep(3)
                 else:
                     print(
                         f"[Pick Swap] Failed to request swap: {res.status_code} {res.text}"
@@ -242,4 +256,3 @@ def swap_pick_position(base_url, auth):
             # 7. Continue to next iteration (which will recalculate everything)
 
         # After inner loop ends, continue to outer loop to reset and try again
-        print("[Pick Swap] Completed one round of attempts, will reset and try again.")

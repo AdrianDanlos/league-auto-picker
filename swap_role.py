@@ -1,9 +1,9 @@
 # flake8: noqa: E501
 import requests
-import asyncio
+import time
 
 
-def _attempt_swap_role(session, base_url, auth, config):
+def swap_role(session, base_url, auth, config):
     """
     Checks for ongoing position swaps and attempts to swap roles if needed.
 
@@ -13,7 +13,7 @@ def _attempt_swap_role(session, base_url, auth, config):
     # Check if session is undefined or None
     if not session:
         print("[Role Swap] Session is undefined. Continuing script.")
-        return True
+        return
 
     # Check for ongoing position swap requests
     try:
@@ -21,10 +21,10 @@ def _attempt_swap_role(session, base_url, auth, config):
         ongoing_res = requests.get(ongoing_swap_url, auth=auth, verify=False)
         if ongoing_res.status_code == 200 and ongoing_res.json():
             print("[Role Swap] Ongoing position swap detected. Skipping role swap.")
-            return False
+            return
     except Exception as e:
         print(f"[Role Swap] Error checking ongoing swap: {e}")
-        return True
+        return
 
     my_cell_id = session.get("localPlayerCellId")
     my_team = session.get("myTeam", [])
@@ -39,14 +39,14 @@ def _attempt_swap_role(session, base_url, auth, config):
     print("assigned_role:", assigned_role)
     if not assigned_role:
         print("[Role Swap] Could not determine assigned role.")
-        return True
+        return
 
     preferred_role = config.get("preferred_role", "")
     if assigned_role == preferred_role:
         print(
             f"[Role Swap] Assigned role '{assigned_role}' is your preferred role. No swap needed."
         )
-        return True
+        return
 
     # Find a teammate with the preferred role
     swap_target = None
@@ -60,7 +60,7 @@ def _attempt_swap_role(session, base_url, auth, config):
 
     if not swap_target:
         print("[Role Swap] No teammate found with a preferred role to swap.")
-        return True
+        return
 
     # Find the correct swap ID from positionSwaps
     position_swaps = session.get("positionSwaps", [])
@@ -79,7 +79,7 @@ def _attempt_swap_role(session, base_url, auth, config):
 
     if not swap_id:
         print(f"[Role Swap] No position swap found for cellId {target_cell_id}.")
-        return True
+        return
 
     # Request the swap using the swap ID
     request_swap_url = (
@@ -87,29 +87,15 @@ def _attempt_swap_role(session, base_url, auth, config):
     )
     try:
         request_res = requests.post(request_swap_url, auth=auth, verify=False)
-        if request_res.status_code == 204:
+        if request_res.status_code == 204 or request_res.status_code == 200:
             print(
                 f"[Role Swap] Successfully requested swap with {preferred_role} (cellId {target_cell_id}, swapId {swap_id})"
             )
         else:
             print(
-                f"[Role Swap] Role swap was declined: {request_res.status_code} {request_res.text}"
+                f"[Role Swap] Role swap error: {request_res.status_code} {request_res.text}"
             )
     except Exception as e:
         print(f"[Role Swap] Exception during swap request: {e}")
 
-    return True
-
-
-async def swap_role(session, base_url, auth, config):
-    """
-    Async wrapper function that calls _attempt_swap_role in a loop every 1 second until it returns True.
-    """
-    print("🔄 Attempting role swap...")
-    while True:
-        result = _attempt_swap_role(session, base_url, auth, config)
-        if result:
-            print("[Role Swap] Role swap ended.")
-            break
-        print("[Role Swap] Waiting 1 second before next attempt...")
-        await asyncio.sleep(1)
+    return

@@ -1,4 +1,5 @@
 # flake8: noqa: E501
+import time
 import requests
 import json
 import urllib3
@@ -68,9 +69,10 @@ async def main():
     session = await wait_for_champ_select(base_url, auth)
     send_champ_select_message(session, base_url, auth)
 
-    # Only done once - wait for role swap to complete
-    await swap_role(session, base_url, auth, config)
-
+    swap_role(session, base_url, auth, config)
+    time.sleep(14) # wait for role swap to complete
+    print("[Role Swap] Role swap phase ended")
+    
     swap_pick_position(base_url, auth)
     pick_and_ban(base_url, auth, config)
 
