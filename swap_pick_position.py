@@ -166,6 +166,9 @@ def swap_pick_position(base_url, auth):
                             print("[Pick Swap] No ongoing swap detected, proceeding...")
                             break  # No ongoing swap, proceed
                     else:
+                        print(
+                            f"[Pick Swap] Ongoing swap check failed: {ongoing_res.status_code}"
+                        )
                         break  # Assume no ongoing swap if endpoint fails
                 except Exception as e:
                     print(f"[Pick Swap] Failed to check ongoing swap: {e}")
@@ -236,7 +239,12 @@ def swap_pick_position(base_url, auth):
             url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/request"
             try:
                 res = requests.post(url, auth=auth, verify=False)
-                if res.status_code == 200:
+                print("🟢 res.text:", res.text)
+                if (
+                    res.status_code == 200
+                    and res.text
+                    and res.text["state"] != "INVALID"
+                ):
                     print(
                         f"[Pick Swap] Successfully requested swap with {assigned_position} at pick order {pick_order} (cellId {cell_id}, swapId {swap_id})"
                     )

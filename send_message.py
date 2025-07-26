@@ -2,9 +2,12 @@
 import requests
 import random
 import json
+import time
 
 
 def send_champ_select_message(session, base_url, auth):
+    time.sleep(2) # Give some time for the lobby to be fully initialized
+
     # Load messages from config file
     with open("config.json", "r") as f:
         config = json.load(f)
@@ -31,7 +34,7 @@ def send_champ_select_message(session, base_url, auth):
         if res.status_code == 200:
             print(f"[Chat] Sent message: {message}")
         else:
-            print(f"[Chat] Failed to send message: {res.status_code}")
+            print(f"[Chat] Failed to send message: {res.status_code}, {res}")
     else:
         print("[Chat] Could not find chatId in session. Session object:")
         print(session)

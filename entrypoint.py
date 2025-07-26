@@ -70,7 +70,7 @@ async def main():
     send_champ_select_message(session, base_url, auth)
 
     swap_role(session, base_url, auth, config)
-    time.sleep(14) # wait for role swap to complete
+    time.sleep(18) # wait for role swap to complete
     print("[Role Swap] Role swap phase ended")
     
     swap_pick_position(base_url, auth)

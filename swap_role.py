@@ -1,6 +1,5 @@
 # flake8: noqa: E501
 import requests
-import time
 
 
 def swap_role(session, base_url, auth, config):
@@ -66,19 +65,29 @@ def swap_role(session, base_url, auth, config):
     position_swaps = session.get("positionSwaps", [])
     target_cell_id = swap_target["cellId"]
     swap_id = None
+
+    # Debug: Print positionSwaps structure
+    print(f"[Role Swap] Available position swaps: {position_swaps}")
+    print(f"[Role Swap] Looking for swap with target cellId: {target_cell_id}")
+
     for swap in position_swaps:
         # The structure may vary, but typically there will be a cellId or similar field
         # Try to match the swap that involves the target cellId
+        print(f"[Role Swap] Checking swap: {swap}")
         if (
             swap.get("cellId") == target_cell_id
             or swap.get("targetCellId") == target_cell_id
             or swap.get("receiverCellId") == target_cell_id
         ):
             swap_id = swap.get("id")
+            print(f"[Role Swap] Found matching swap with ID: {swap_id}")
             break
 
     if not swap_id:
         print(f"[Role Swap] No position swap found for cellId {target_cell_id}.")
+        print(f"[Role Swap] Available swaps: {position_swaps}")
+        print("🟢 calling again swap_role(session, base_url, auth, config)")
+        swap_role(session, base_url, auth, config)
         return
 
     # Request the swap using the swap ID
