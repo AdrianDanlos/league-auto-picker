@@ -1,3 +1,22 @@
+# League Auto Picker
+
+League Auto Picker is an automation utility programm designed to enhance the League of Legends gaming experience by automating repetitive tasks during the champion selection phase.
+
+## Features
+
+- 🤖 **Automated Champion Selection**: Automatically picks champions based on your preferences
+- 🚫 **Smart Banning**: Automatically bans specified champions
+- ⚡ **Queue Management**: Automatically accepts queue pops
+- 🔄 **Position Swapping**: Handles position and pick order swaps by trying to get your preferred role and pick as late as possible.
+- 💬 **Communication**: Sends custom messages during the selection phase
+- ⚙️ **Configurable**: Easy-to-use configuration system
+
+## Requirements
+
+- **League of Legends Client** (must be running)
+- **Python 3.8+**
+- **Windows OS** (currently optimized for Windows)
+
 ## Setup Instructions
 
 1. **Install Python**
@@ -29,7 +48,7 @@
    pip install -r requirements.txt
    ```
 
-3. **Run the script**
-    ```
-    py .\entrypoint.py
-    ```
+4. **Run the script**
+   ```
+   py .\entrypoint.py
+   ```
