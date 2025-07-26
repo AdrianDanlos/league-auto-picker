@@ -1,21 +1,18 @@
 # flake8: noqa: E501
 import requests
 import random
+import json
 
 
 def send_champ_select_message(session, base_url, auth):
-    messages = [
-        "yo team let's run it up - we bout to diff these kids",
-        "sup team, time to gap them - this one's free",
-        "waddup squad, let's farm some LP real quick",
-        "ay team we finna smash these plebs no cap",
-        "yooo let's get this dub, bout to be ez clap",
-        "what's good team, time to int their mental fr",
-        "lesgooo team we bout to turbo stomp - free win",
-        "ay team let's cook these bots, gonna be a banger",
-        "yoo squad time to gap check - they're not ready",
-        "sup team we finna hard carry this lobby ngl",
-    ]
+    # Load messages from config file
+    with open("config.json", "r") as f:
+        config = json.load(f)
+
+    messages = config.get("messages", [])
+    if not messages:
+        print("[Chat] No messages found in config file")
+        return
 
     message = random.choice(messages)
 

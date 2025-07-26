@@ -13,5 +13,17 @@
     "BOTTOM": ["Jhin", "Draven", "Caitlyn"],
     "UTILITY": ["Yuumi", "Blitzcrank", "Leona"]
   },
-  "preferred_role": "middle"
+  "preferred_role": "middle",
+  "messages": [
+    "yo team let's run it up - we bout to diff these kids",
+    "sup team, time to gap them - this one's free",
+    "waddup squad, let's farm some LP real quick",
+    "ay team we finna smash these plebs no cap",
+    "yooo let's get this dub, bout to be ez clap",
+    "what's good team, time to int their mental fr",
+    "lesgooo team we bout to turbo stomp - free win",
+    "ay team let's cook these bots, gonna be a banger",
+    "yoo squad time to gap check - they're not ready",
+    "sup team we finna hard carry this lobby ngl"
+  ]
 }
