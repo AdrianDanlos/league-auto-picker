@@ -1,76 +1,116 @@
 # flake8: noqa: E501
-import pyautogui
+import requests
 import time
-from utils import get_pick_order
-from utils import percent_to_absolute_coords
+import asyncio
 
 
-def swap_role(session, config):
+def _attempt_swap_role(session, base_url, auth, config):
     """
-    Attempts to swap roles if assigned role is not the preferred_role.
-    Simulates two clicks on the teammate with a preferred role using swap_role['first_click'] and swap_role['second_click'].
+    Checks for ongoing position swaps and attempts to swap roles if needed.
+
+    Returns:
+        bool: True if no ongoing swaps and role swap logic completed, False if ongoing swap detected
     """
+    # Check if session is undefined or None
+    if not session:
+        print("[Role Swap] Session is undefined. Continuing script.")
+        return True
+
+    # Check for ongoing position swap requests
+    try:
+        ongoing_swap_url = f"{base_url}/lol-champ-select/v1/ongoing-position-swap"
+        ongoing_res = requests.get(ongoing_swap_url, auth=auth, verify=False)
+        if ongoing_res.status_code == 200 and ongoing_res.json():
+            print("[Role Swap] Ongoing position swap detected. Skipping role swap.")
+            return False
+    except Exception as e:
+        print(f"[Role Swap] Error checking ongoing swap: {e}")
+        return True
+
     my_cell_id = session.get("localPlayerCellId")
     my_team = session.get("myTeam", [])
+
+    # Find assigned role
     assigned_role = None
     for participant in my_team:
         if participant.get("cellId") == my_cell_id:
             assigned_role = participant.get("assignedPosition")
             break
+
     print("assigned_role:", assigned_role)
     if not assigned_role:
         print("[Role Swap] Could not determine assigned role.")
-        return
+        return True
+
     preferred_role = config.get("preferred_role", "")
     if assigned_role == preferred_role:
         print(
-            f"[Role Swap] Assigned role '{assigned_role}' is your preferred role. "
-            "No swap needed."
+            f"[Role Swap] Assigned role '{assigned_role}' is your preferred role. No swap needed."
         )
-        return
+        return True
+
     # Find a teammate with the preferred role
     swap_target = None
     for participant in my_team:
-        print("preferred_role", preferred_role)
-        print("participant.get(assignedPosition):", participant.get("assignedPosition"))
         if (
             participant.get("cellId") != my_cell_id
             and participant.get("assignedPosition") == preferred_role
         ):
             swap_target = participant
             break
+
     if not swap_target:
         print("[Role Swap] No teammate found with a preferred role to swap.")
-        return
-    # Get pick order for both players
-    target_pick_order = get_pick_order(session, swap_target["cellId"])
-    if not target_pick_order:
-        print("[Role Swap] Could not determine target's pick order.")
-        return
-    if not (1 <= target_pick_order <= 5):
-        print(
-            f"[Role Swap] Target pick order {target_pick_order} is not in 1-5 "
-            "(your team). Skipping role swap."
-        )
-        return
-    coord_key = f"position_{target_pick_order}"
-    coordinates1 = config.get("swap_role", {}).get("first_click", {}).get(coord_key)
-    coordinates2 = config.get("swap_role", {}).get("second_click", {}).get(coord_key)
-    if not coordinates1 or not coordinates2:
-        print(f"[Role Swap] No coordinates found for pick order {target_pick_order}.")
-        return
+        return True
 
-    x1, y1 = percent_to_absolute_coords(coordinates1["x"], coordinates1["y"])
-    x2, y2 = percent_to_absolute_coords(coordinates2["x"], coordinates2["y"])
+    # Find the correct swap ID from positionSwaps
+    position_swaps = session.get("positionSwaps", [])
+    target_cell_id = swap_target["cellId"]
+    swap_id = None
+    for swap in position_swaps:
+        # The structure may vary, but typically there will be a cellId or similar field
+        # Try to match the swap that involves the target cellId
+        if (
+            swap.get("cellId") == target_cell_id
+            or swap.get("targetCellId") == target_cell_id
+            or swap.get("receiverCellId") == target_cell_id
+        ):
+            swap_id = swap.get("id")
+            break
 
+    if not swap_id:
+        print(f"[Role Swap] No position swap found for cellId {target_cell_id}.")
+        return True
+
+    # Request the swap using the swap ID
+    request_swap_url = (
+        f"{base_url}/lol-champ-select/v1/session/position-swaps/{swap_id}/request"
+    )
     try:
-        pyautogui.click(x1, y1)
-        time.sleep(0.2)  # Small delay between clicks
-        pyautogui.click(x2, y2)
-        print(
-            f"[Role Swap] Swap with {swap_target['assignedPosition']} "
-            f"at pick order {target_pick_order} (first click at {x1},{y1}, "
-            f"second click at {x2},{y2})"
-        )
+        request_res = requests.post(request_swap_url, auth=auth, verify=False)
+        if request_res.status_code == 204:
+            print(
+                f"[Role Swap] Successfully requested swap with {preferred_role} (cellId {target_cell_id}, swapId {swap_id})"
+            )
+        else:
+            print(
+                f"[Role Swap] Role swap was declined: {request_res.status_code} {request_res.text}"
+            )
     except Exception as e:
-        print(f"[Role Swap] Failed to perform clicks: {e}")
+        print(f"[Role Swap] Exception during swap request: {e}")
+
+    return True
+
+
+async def swap_role(session, base_url, auth, config):
+    """
+    Async wrapper function that calls _attempt_swap_role in a loop every 1 second until it returns True.
+    """
+    print("🔄 Attempting role swap...")
+    while True:
+        result = _attempt_swap_role(session, base_url, auth, config)
+        if result:
+            print("[Role Swap] Role swap ended.")
+            break
+        print("[Role Swap] Waiting 1 second before next attempt...")
+        await asyncio.sleep(1)

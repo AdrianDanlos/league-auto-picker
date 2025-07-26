@@ -1,12 +1,17 @@
 # flake8: noqa: E501
 import requests
-import time
 import json
 import urllib3
 import psutil
 import re
+import asyncio
 
+from accept_queue import accept_queue
+from pick_and_ban import pick_and_ban
+from swap_role import swap_role
+from swap_pick_position import swap_pick_position
 from send_message import send_champ_select_message
+from utils import get_session
 
 # Disable warnings for self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -26,58 +31,49 @@ def get_lcu_credentials():
     raise RuntimeError("League client not found.")
 
 
-def get_session(base_url, auth):
-    r = requests.get(f"{base_url}/lol-champ-select/v1/session", auth=auth, verify=False)
-    return r.json() if r.status_code == 200 else None
-
-
-def wait_for_champ_select(base_url, auth):
+async def wait_for_champ_select(base_url, auth):
     session = None
-    while not session:
-        print("🟢 Waiting for queue pop...")
-        accept_queue(base_url, auth)
-        print("🟢 Waiting for champ select...")
-        time.sleep(10)  # wait for everyone to accept the queue
+    in_champ_select = False
+    print("🟢 Waiting for queue pop...")
+    accept_queue(base_url, auth)  # This blocks until queue is accepted
+    print("🟢 Waiting for Champ Select to start...")
+    while True:
         session = get_session(base_url, auth)
         if session:
-            print("🟢 Welcome to the Champ Select...")
-            time.sleep(4)  # wait for the champ select to load
+            if not in_champ_select:
+                print("🟢 Welcome to the Champ Select...")
+                in_champ_select = True
+            # Stay in this loop until champ select ends
         else:
-            print("🔄 No session found. Retrying queue pop...")
-    return session
+            if in_champ_select:
+                print(
+                    "🔄 Champ select ended or was dodged. Waiting for queue pop again..."
+                )
+                in_champ_select = False
+                print("🟢 Waiting for queue pop...")
+                accept_queue(base_url, auth)
+                print("🟢 Waiting for Champ Select to start...")
+        if in_champ_select and session:
+            # Return session only when we have just entered champ select
+            return session
+        await asyncio.sleep(1)
 
 
-if __name__ == "__main__":
-    import pygetwindow as gw
-    from accept_queue import accept_queue
-    from pick_and_ban import pick_and_ban
-    from swap_role import swap_role
-    from swap_pick_position import swap_pick_position
-
+async def main():
     port, token = get_lcu_credentials()
     base_url = f"https://127.0.0.1:{port}"
     auth = requests.auth.HTTPBasicAuth("riot", token)
 
     # Wait for a valid session (champ select)
-    session = wait_for_champ_select(base_url, auth)
+    session = await wait_for_champ_select(base_url, auth)
     send_champ_select_message(session, base_url, auth)
 
-    # Only done once
-    swap_role(session, config)
-    time.sleep(10)  # wait until the role swap ends
+    # Only done once - wait for role swap to complete
+    await swap_role(session, base_url, auth, config)
 
-    # Main loop: only runs after a valid session is acquired
-    while True:
-        try:
-            if session:
-                # Refresh session to get the latest state of the champ select
-                session = get_session(base_url, auth)
-                swap_pick_position(session, config)
-                pick_and_ban(session, base_url, auth, config)
-            else:
-                session = wait_for_champ_select(base_url, auth)
+    swap_pick_position(base_url, auth)
+    pick_and_ban(base_url, auth, config)
 
-            time.sleep(13)
-        except Exception as e:
-            print("[Error]", e)
-            time.sleep(5)
+
+if __name__ == "__main__":
+    asyncio.run(main())

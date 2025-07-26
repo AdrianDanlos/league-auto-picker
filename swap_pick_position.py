@@ -1,72 +1,229 @@
 # flake8: noqa: E501
 
-# Add pyautogui for click simulation
-import pyautogui
+import requests
 import time
-from utils import get_pick_order
-from utils import percent_to_absolute_coords
+from utils import get_session, get_pick_order
 
 
-def swap_pick_position(session, config):
+def swap_pick_position(base_url, auth):
     """
-    Checks the current player's pick order and asks to swap with every player below them,
-    starting from the 5th position (unless it's top), then 4th, 3rd, and 2nd.
-    Only asks players below the current pick order, and skips asking top if they're in 5th position.
-    Simulates the swap request clicks using the config's swap_pick_position coordinates.
-    """
-    my_cell_id = session.get("localPlayerCellId")
-    my_team = session.get("myTeam", [])
-    actions = session.get("actions", [])
+    Automatically requests pick order swaps to move to the 5th pick position.
 
-    # Get my pick order
-    my_pick_order = get_pick_order(session, my_cell_id)
-    if not my_pick_order:
-        print("[Pick Swap] Could not determine your pick order.")
+    Step-by-step process:
+    1. Check if already in 5th position - if so, exit
+    2. Handle incoming pick order swap requests:
+       - Accept requests from players below your pick order (moves you later)
+       - Decline requests from players above your pick order (moves you earlier)
+    3. Wait for any ongoing pick order swap in the lobby to complete
+    4. Re-fetch session data to get current pick orders
+    5. Find valid swap targets (players below your pick order):
+       - Skip players already attempted in this round
+       - Skip 5th TOP unless you are 4th pick
+       - Prioritize highest pick order targets first
+    6. Request swap with the best available target
+    7. Repeat steps 2-6 until no valid targets remain
+    8. Reset and try again from the beginning (in case new targets become available)
+
+    The function continues running until you reach 5th position or encounter an error.
+    Uses the League Client API POST /lol-champ-select/v1/session/pick-order-swaps/{id}/request.
+    """
+    # Check if session is undefined or None
+    if not get_session(base_url, auth):
+        print("[Role Swap] Session is undefined. Continuing script.")
         return
 
-    # Build a map of cellId to (pick_order, assignedPosition)
-    pick_orders = {}
-    for participant in my_team:
-        cell_id = participant.get("cellId")
-        assigned_position = participant.get("assignedPosition")
-        pick_order = get_pick_order(session, cell_id)
-        if pick_order:
-            pick_orders[cell_id] = (pick_order, assigned_position)
-
-    # Sort teammates by pick order descending (5th to 2nd)
-    sorted_teammates = sorted(
-        [item for item in pick_orders.items() if item[1][0] > my_pick_order],
-        key=lambda x: -x[1][0],
-    )
-
-    for cell_id, (pick_order, assigned_position) in sorted_teammates:
-        # Only ask if below me
-        if pick_order <= my_pick_order:
-            continue
-        # If 5th position and assigned_position is TOP, skip
-        if pick_order == 5 and assigned_position and assigned_position.upper() == "TOP":
-            print(f"[Pick Swap] Skipping TOP in 5th position (cellId {cell_id}).")
-            continue
-        coord_key = f"position_{pick_order}"
-        coordinates1 = (
-            config.get("swap_pick_position", {}).get("first_click", {}).get(coord_key)
-        )
-        coordinates2 = (
-            config.get("swap_pick_position", {}).get("second_click", {}).get(coord_key)
-        )
-        if not coordinates1 or not coordinates2:
-            print(f"[Pick Swap] No coordinates found for pick order {pick_order}.")
-            continue
-
-        x1, y1 = percent_to_absolute_coords(coordinates1["x"], coordinates1["y"])
-        x2, y2 = percent_to_absolute_coords(coordinates2["x"], coordinates2["y"])
-
+    while True:
+        # Check if we're already in 5th position
         try:
-            pyautogui.click(x1, y1)
-            time.sleep(0.2)
-            pyautogui.click(x2, y2)
-            print(
-                f"[Pick Swap] Asking {assigned_position} at pick order {pick_order} (cellId {cell_id}) to swap."
-            )
+            session = get_session(base_url, auth)
         except Exception as e:
-            print(f"[Pick Swap] Failed to perform clicks for cellId {cell_id}: {e}")
+            print(f"[Pick Swap] Failed to fetch session: {e}")
+            break
+
+        my_cell_id = session.get("localPlayerCellId")
+        my_pick_order = get_pick_order(session, my_cell_id)
+        if not my_pick_order:
+            print("[Pick Swap] Could not determine your pick order.")
+            break
+
+        # If already in 5th position, no need to swap
+        if my_pick_order == 5:
+            print("[Pick Swap] Already in 5th position, no need to swap.")
+            break
+
+        attempted_cell_ids = set()
+        while True:
+            # 0. Handle any incoming pick order swap requests
+            try:
+                session = get_session(base_url, auth)
+                my_cell_id = session.get("localPlayerCellId")
+                my_pick_order = get_pick_order(session, my_cell_id)
+                pick_order_swaps = session.get("pickOrderSwaps", [])
+
+                for swap in pick_order_swaps:
+                    # Check if this is an incoming swap request to us
+                    if swap.get("id") == my_cell_id and not swap.get("completed", True):
+                        # The requester is the other participant in this swap
+                        requester_cell_id = None
+                        for participant in session.get("myTeam", []):
+                            participant_cell_id = participant.get("cellId")
+                            if participant_cell_id != my_cell_id:
+                                # Check if this participant has a swap request to us
+                                for other_swap in pick_order_swaps:
+                                    if (
+                                        other_swap.get("id") == participant_cell_id
+                                        and other_swap.get("completed") == False
+                                    ):
+                                        requester_cell_id = participant_cell_id
+                                        break
+                            if requester_cell_id:
+                                break
+
+                        if requester_cell_id:
+                            requester_pick_order = get_pick_order(
+                                session, requester_cell_id
+                            )
+
+                            # Find the swap id for the swap between us and the requester
+                            swap_id = None
+                            for s in pick_order_swaps:
+                                # The swap should involve both our cell id and the requester
+                                # Try to match either direction (id == my_cell_id or id == requester_cell_id)
+                                if (
+                                    s.get("id") == my_cell_id
+                                    and s.get("cellId") == requester_cell_id
+                                ) or (
+                                    s.get("id") == requester_cell_id
+                                    and s.get("cellId") == my_cell_id
+                                ):
+                                    swap_id = s.get("id")
+                                    break
+                            if not swap_id:
+                                # Fallback: try to use the requester's cell id
+                                swap_id = requester_cell_id
+
+                            if requester_pick_order and my_pick_order:
+                                if requester_pick_order < my_pick_order:
+                                    # Request from someone above us - decline
+                                    decline_url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/decline"
+                                    decline_res = requests.post(
+                                        decline_url, auth=auth, verify=False
+                                    )
+                                    if decline_res.status_code == 204:
+                                        print(
+                                            f"[Pick Swap] Declined incoming swap request from pick order {requester_pick_order} (above us)"
+                                        )
+                                    else:
+                                        print(
+                                            f"[Pick Swap] Failed to decline swap request: {decline_res.status_code}"
+                                        )
+                                elif requester_pick_order > my_pick_order:
+                                    # Request from someone below us - accept
+                                    accept_url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/accept"
+                                    accept_res = requests.post(
+                                        accept_url, auth=auth, verify=False
+                                    )
+                                    if accept_res.status_code == 204:
+                                        print(
+                                            f"[Pick Swap] Accepted incoming swap request from pick order {requester_pick_order} (below us)"
+                                        )
+                                    else:
+                                        print(
+                                            f"[Pick Swap] Failed to accept swap request: {accept_res.status_code}"
+                                        )
+            except Exception as e:
+                print(f"[Pick Swap] Failed to handle incoming swap requests: {e}")
+
+            # 1. Wait for any ongoing pick order swap to complete
+            while True:
+                try:
+                    ongoing_swap_url = (
+                        f"{base_url}/lol-champ-select/v1/ongoing-pick-order-swap"
+                    )
+                    ongoing_res = requests.get(
+                        ongoing_swap_url, auth=auth, verify=False
+                    )
+                    if ongoing_res.status_code == 200:
+                        ongoing_swap = ongoing_res.json()
+                        if ongoing_swap:
+                            print(
+                                "[Pick Swap] Waiting for ongoing pick order swap to complete..."
+                            )
+                            time.sleep(2)
+                            continue
+                        else:
+                            break  # No ongoing swap, proceed
+                    else:
+                        break  # Assume no ongoing swap if endpoint fails
+                except Exception as e:
+                    print(f"[Pick Swap] Failed to check ongoing swap: {e}")
+                    break  # Proceed anyway if we can't check
+
+            # 2. Re-fetch session and get your pick order
+            try:
+                session = get_session(base_url, auth)
+            except Exception as e:
+                print(f"[Pick Swap] Failed to fetch session: {e}")
+                break
+            my_cell_id = session.get("localPlayerCellId")
+            my_team = session.get("myTeam", [])
+            my_pick_order = get_pick_order(session, my_cell_id)
+            if not my_pick_order:
+                print("[Pick Swap] Could not determine your pick order.")
+                break
+
+            # 3. Calculate list of valid targets (players below you, excluding 5th TOP and already attempted)
+            pick_orders = {}
+            for participant in my_team:
+                cell_id = participant.get("cellId")
+                assigned_position = participant.get("assignedPosition")
+                pick_order = get_pick_order(session, cell_id)
+                if (
+                    pick_order
+                    and pick_order > my_pick_order
+                    and cell_id not in attempted_cell_ids
+                ):
+                    # Exclude 5th TOP unless I am 4th pick
+                    if not (
+                        pick_order == 5
+                        and assigned_position
+                        and assigned_position.upper() == "TOP"
+                        and my_pick_order != 4
+                    ):
+                        pick_orders[cell_id] = (pick_order, assigned_position)
+
+            # 4. If no valid targets, break out of inner loop to reset and try again
+            if not pick_orders:
+                print(
+                    "[Pick Swap] No valid swap targets found, will reset and try again."
+                )
+                break
+
+            # 5. Pick the best target (highest pick order)
+            cell_id, (pick_order, assigned_position) = sorted(
+                pick_orders.items(), key=lambda x: -x[1][0]
+            )[0]
+
+            # 6. Make the swap request
+            url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{cell_id}/request"
+            try:
+                res = requests.post(url, auth=auth, verify=False)
+                if res.status_code == 204:
+                    print(
+                        f"[Pick Swap] Successfully requested swap with {assigned_position} at pick order {pick_order} (cellId {cell_id})"
+                    )
+                else:
+                    print(
+                        f"[Pick Swap] Failed to request swap: {res.status_code} {res.text}"
+                    )
+                    attempted_cell_ids.add(cell_id)
+            except Exception as e:
+                print(
+                    f"[Pick Swap] Exception during swap request for cellId {cell_id}: {e}"
+                )
+                attempted_cell_ids.add(cell_id)
+
+            # 7. Continue to next iteration (which will recalculate everything)
+
+        # After inner loop ends, continue to outer loop to reset and try again
+        print("[Pick Swap] Completed one round of attempts, will reset and try again.")
