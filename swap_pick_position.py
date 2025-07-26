@@ -204,13 +204,29 @@ def swap_pick_position(base_url, auth):
                 pick_orders.items(), key=lambda x: -x[1][0]
             )[0]
 
-            # 6. Make the swap request
-            url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{cell_id}/request"
+            # 6. Find the correct swap ID from pickOrderSwaps
+            pick_order_swaps = session.get("pickOrderSwaps", [])
+            swap_id = None
+            for swap in pick_order_swaps:
+                # Look for a swap that involves both our cell id and the target cell id
+                if (swap.get("id") == my_cell_id and swap.get("cellId") == cell_id) or (
+                    swap.get("id") == cell_id and swap.get("cellId") == my_cell_id
+                ):
+                    swap_id = swap.get("id")
+                    break
+
+            if not swap_id:
+                print(f"[Pick Swap] No pick order swap found for cellId {cell_id}.")
+                attempted_cell_ids.add(cell_id)
+                continue
+
+            # 7. Make the swap request
+            url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/request"
             try:
                 res = requests.post(url, auth=auth, verify=False)
                 if res.status_code == 204:
                     print(
-                        f"[Pick Swap] Successfully requested swap with {assigned_position} at pick order {pick_order} (cellId {cell_id})"
+                        f"[Pick Swap] Successfully requested swap with {assigned_position} at pick order {pick_order} (cellId {cell_id}, swapId {swap_id})"
                     )
                 else:
                     print(
