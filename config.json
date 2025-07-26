@@ -2,16 +2,16 @@
   "bans": {
     "TOP": ["Darius"],
     "JUNGLE": ["Lee Sin"],
-    "MIDDLE": ["Yasuo"],
+    "MIDDLE": ["Hwei"],
     "BOTTOM": ["Draven"],
     "UTILITY": ["Yuumi"]
   },
   "picks": {
-    "TOP": ["Galio", "Sett", "Garen"],
-    "JUNGLE": ["Lee Sin", "Elise", "Warwick"],
-    "MIDDLE": ["Ahri", "Syndra", "Annie"],
-    "BOTTOM": ["Jhin", "Draven", "Caitlyn"],
-    "UTILITY": ["Yuumi", "Blitzcrank", "Leona"]
+    "TOP": ["Galio", "Malphite"],
+    "JUNGLE": [""],
+    "MIDDLE": ["Ahri", "Aurelion Sol", "Diana", "Kassadin", "Syndra", "Fizz", "Galio", "Leblanc", "Annie", "Lissandra", "Zed", "Orianna", "Viktor", "Vladimir", "Veigar", "Malphite"],
+    "BOTTOM": [""],
+    "UTILITY": ["Leona", "Blitzcrank"]
   },
   "preferred_role": "middle",
   "messages": [
