@@ -35,29 +35,32 @@ def get_lcu_credentials():
 async def wait_for_champ_select(base_url, auth):
     session = None
     in_champ_select = False
-    print("🟢 Waiting for queue pop...")
-    accept_queue(base_url, auth)  # This blocks until queue is accepted
-    print("🟢 Waiting for Champ Select to start...")
+
     while True:
-        session = get_session(base_url, auth)
-        if session:
-            if not in_champ_select:
-                print("🟢 Welcome to the Champ Select...")
-                in_champ_select = True
-            # Stay in this loop until champ select ends
-        else:
-            if in_champ_select:
-                print(
-                    "🔄 Champ select ended or was dodged. Waiting for queue pop again..."
-                )
-                in_champ_select = False
-                print("🟢 Waiting for queue pop...")
-                accept_queue(base_url, auth)
-                print("🟢 Waiting for Champ Select to start...")
-        if in_champ_select and session:
-            # Return session only when we have just entered champ select
-            return session
-        await asyncio.sleep(1)
+        # Try to accept queue - this will return if queue is cancelled
+        accept_queue(base_url, auth)
+        print("🟢 Waiting for Champ Select to start...")
+
+        # Check if we entered champ select
+        while True:
+            session = get_session(base_url, auth)
+            if session:
+                if not in_champ_select:
+                    print("🟢 Welcome to the Champ Select...")
+                    in_champ_select = True
+                # Stay in this loop until champ select ends
+            else:
+                if in_champ_select:
+                    print(
+                        "🔄 Champ select ended or was dodged. Waiting for queue pop again..."
+                    )
+                    in_champ_select = False
+                    print("🟢 Waiting for queue pop...")
+                    break  # Exit inner loop to try accepting next queue
+            if in_champ_select and session:
+                # Return session only when we have just entered champ select
+                return session
+            await asyncio.sleep(1)
 
 
 async def main():
@@ -70,11 +73,10 @@ async def main():
     send_champ_select_message(session, base_url, auth)
 
     swap_role(session, base_url, auth, config)
-    time.sleep(18) # wait for role swap to complete
+    time.sleep(18)  # wait for role swap to complete
     print("[Role Swap] Role swap phase ended")
-    
-    swap_pick_position(base_url, auth)
     pick_and_ban(base_url, auth, config)
+    swap_pick_position(base_url, auth)    
 
 
 if __name__ == "__main__":

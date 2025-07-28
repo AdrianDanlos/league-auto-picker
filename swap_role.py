@@ -6,8 +6,26 @@ def swap_role(session, base_url, auth, config):
     """
     Checks for ongoing position swaps and attempts to swap roles if needed.
 
+    This function analyzes the current champion select session to determine if the user
+    is assigned to their preferred role. If not, it attempts to find a teammate with
+    the preferred role and requests a position swap.
+
+    Args:
+        session (dict): The League Client API session object containing team information,
+                      position swaps, and local player data
+        base_url (str): The base URL for the League Client API
+        auth (tuple): Authentication credentials for the API requests
+        config (dict): Configuration dictionary containing the 'preferred_role' setting
+
     Returns:
-        bool: True if no ongoing swaps and role swap logic completed, False if ongoing swap detected
+        None: Function returns None in all cases (void function)
+
+    Behavior:
+        - Checks for ongoing position swaps and skips if one is detected
+        - Compares assigned role with preferred role from config
+        - Searches for teammates with the preferred role
+        - Requests position swap if suitable teammate is found
+        - Handles API errors gracefully with appropriate logging
     """
     # Check if session is undefined or None
     if not session:

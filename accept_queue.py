@@ -5,6 +5,7 @@ import time
 
 def accept_queue(base_url, auth):
     """Polls the ready-check endpoint and accepts the match if found."""
+    last_state = None
     while True:
         try:
             r = requests.get(
@@ -12,8 +13,24 @@ def accept_queue(base_url, auth):
             )
             if r.status_code == 200:
                 data = r.json()
-                if data.get("state") == "InProgress":
-                    print("🟢 Match found! Accepting queue...")
+                state = data.get("state")
+
+                # Only log state changes to reduce spam
+                if state != last_state:
+                    if state == "InProgress":
+                        print("🟢 Match found! Accepting queue...")
+                    elif state in ["Failed", "Cancelled", "Declined"]:
+                        print(
+                            f"🔄 Queue was {state.lower()}. Waiting for next queue..."
+                        )
+                        break
+                    elif state in ["None", "Invalid"]:
+                        print("🟢 Waiting for queue pop...")
+                    else:
+                        print(f"🔄 Queue state: {state}. Waiting...")
+                    last_state = state
+
+                if state == "InProgress":
                     accept = requests.post(
                         f"{base_url}/lol-matchmaking/v1/ready-check/accept",
                         auth=auth,

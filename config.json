@@ -9,7 +9,24 @@
   "picks": {
     "TOP": ["Galio", "Malphite"],
     "JUNGLE": [""],
-    "MIDDLE": ["Ahri", "Aurelion Sol", "Diana", "Kassadin", "Syndra", "Fizz", "Galio", "Leblanc", "Annie", "Lissandra", "Zed", "Orianna", "Viktor", "Vladimir", "Veigar", "Malphite"],
+    "MIDDLE": [
+      "Ahri",
+      "Aurelion Sol",
+      "Diana",
+      "Kassadin",
+      "Syndra",
+      "Fizz",
+      "Galio",
+      "Leblanc",
+      "Annie",
+      "Lissandra",
+      "Zed",
+      "Orianna",
+      "Viktor",
+      "Vladimir",
+      "Veigar",
+      "Malphite"
+    ],
     "BOTTOM": [""],
     "UTILITY": ["Leona", "Blitzcrank"]
   },
