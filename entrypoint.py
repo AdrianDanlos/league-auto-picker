@@ -6,6 +6,7 @@ import urllib3
 import psutil
 import re
 import asyncio
+import threading
 
 from accept_queue import accept_queue
 from pick_and_ban import pick_and_ban
@@ -75,9 +76,26 @@ async def main():
     swap_role(session, base_url, auth, config)
     time.sleep(18)  # wait for role swap to complete
     print("[Role Swap] Role swap phase ended")
-    pick_and_ban(base_url, auth, config)
-    swap_pick_position(base_url, auth)    
+
+    # Run pick_and_ban and swap_pick_position concurrently in separate threads
+    pick_ban_thread = threading.Thread(
+        target=pick_and_ban, args=(base_url, auth, config)
+    )
+    swap_position_thread = threading.Thread(
+        target=swap_pick_position, args=(base_url, auth)
+    )
+
+    pick_ban_thread.daemon = True
+    swap_position_thread.daemon = True
+
+    pick_ban_thread.start()
+    swap_position_thread.start()
+    
+    # Wait for both threads to complete (they will run until champ select ends)
+    pick_ban_thread.join()
+    swap_position_thread.join()
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+
