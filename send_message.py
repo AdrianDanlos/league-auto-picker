@@ -6,7 +6,7 @@ import time
 
 
 def send_champ_select_message(session, base_url, auth):
-    time.sleep(2) # Give some time for the lobby to be fully initialized
+    time.sleep(4) # Give some time for the lobby to be fully initialized
 
     # Load messages from config file
     with open("config.json", "r") as f:

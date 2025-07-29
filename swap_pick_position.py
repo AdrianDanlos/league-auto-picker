@@ -55,9 +55,14 @@ def swap_pick_position(base_url, auth):
         return
 
     while True:
-        # Check if we're already in 5th position
         try:
             session = get_session(base_url, auth)
+            # Check if session is None (someone dodged)
+            if session is None:
+                print(
+                    "[Pick Swap] Session is None - someone may have dodged. Exiting..."
+                )
+                return
         except Exception as e:
             print(f"[Pick Swap] Failed to fetch session: {e}")
             break
@@ -78,6 +83,13 @@ def swap_pick_position(base_url, auth):
             # 0. Handle any incoming pick order swap requests
             try:
                 session = get_session(base_url, auth)
+                # Check if session is None (someone dodged)
+                if session is None:
+                    print(
+                        "[Pick Swap] Session is None during incoming request handling - someone may have dodged. Exiting..."
+                    )
+                    return
+
                 my_cell_id = session.get("localPlayerCellId")
                 my_pick_order = get_pick_order(session, my_cell_id)
                 pick_order_swaps = session.get("pickOrderSwaps", [])
@@ -201,9 +213,16 @@ def swap_pick_position(base_url, auth):
             # 2. Re-fetch session and get your pick order
             try:
                 session = get_session(base_url, auth)
+                # Check if session is None (someone dodged)
+                if session is None:
+                    print(
+                        "[Pick Swap] Session is None after re-fetch - someone may have dodged. Exiting..."
+                    )
+                    return
             except Exception as e:
                 print(f"[Pick Swap] Failed to fetch session: {e}")
                 break
+
             my_cell_id = session.get("localPlayerCellId")
             my_team = session.get("myTeam", [])
             my_pick_order = get_pick_order(session, my_cell_id)

@@ -51,8 +51,7 @@ def swap_role(session, base_url, auth, config):
         if participant.get("cellId") == my_cell_id:
             assigned_role = participant.get("assignedPosition")
             break
-
-    print("assigned_role:", assigned_role)
+        
     if not assigned_role:
         print("[Role Swap] Could not determine assigned role.")
         return

@@ -21,7 +21,7 @@ def accept_queue(base_url, auth):
                 # Only log state changes to reduce spam
                 if state != last_state:
                     if state == "InProgress":
-                        print("🟢 Match found! Accepting queue...")
+                        print("🟢 Match found!")
                     elif state in ["Failed", "Cancelled", "Declined"]:
                         print(
                             f"🔄 Queue was {state.lower()}. Waiting for next queue..."
