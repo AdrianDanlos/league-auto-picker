@@ -27,9 +27,8 @@ def swap_role(session, base_url, auth, config):
         - Requests position swap if suitable teammate is found
         - Handles API errors gracefully with appropriate logging
     """
-    # Check if session is undefined or None
+    # Check if session is undefined or None (Someone dodged)
     if not session:
-        print("[Role Swap] Session is undefined. Continuing script.")
         return
 
     # Check for ongoing position swap requests

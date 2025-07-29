@@ -50,9 +50,8 @@ def swap_pick_position(base_url, auth):
         - Implements timeout mechanisms for ongoing swaps
         - Tracks attempted swaps to avoid infinite loops
     """
-    # Check if session is undefined or None
+    # Check if session is undefined or None (Someone dodged)
     if not get_session(base_url, auth):
-        print("[Role Swap] Session is undefined. Continuing script.")
         return
 
     while True:
@@ -189,10 +188,7 @@ def swap_pick_position(base_url, auth):
                             print("[Pick Swap] No ongoing swap detected, proceeding...")
                             break  # No ongoing swap, proceed
                     else:
-                        print(
-                            f"[Pick Swap] Ongoing swap check failed: {ongoing_res.status_code}"
-                        )
-                        break  # Assume no ongoing swap if endpoint fails
+                        break  # Assume no ongoing swap if endpoint fails {ongoing_res.status_code}
                 except Exception as e:
                     print(f"[Pick Swap] Failed to check ongoing swap: {e}")
                     break  # Proceed anyway if we can't check

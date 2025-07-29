@@ -40,7 +40,6 @@ async def wait_for_champ_select(base_url, auth):
     while True:
         # Try to accept queue - this will return if queue is cancelled
         accept_queue(base_url, auth)
-        print("🟢 Waiting for Champ Select to start...")
 
         # Check if we entered champ select
         while True:
@@ -63,37 +62,39 @@ async def wait_for_champ_select(base_url, auth):
                 return session
             await asyncio.sleep(1)
 
+port, token = get_lcu_credentials()
+base_url = f"https://127.0.0.1:{port}"
+auth = requests.auth.HTTPBasicAuth("riot", token)
 
 async def main():
-    port, token = get_lcu_credentials()
-    base_url = f"https://127.0.0.1:{port}"
-    auth = requests.auth.HTTPBasicAuth("riot", token)
+    while not get_session(base_url, auth):
+        # Wait for a valid session (champ select)
+        session = await wait_for_champ_select(base_url, auth)
+        send_champ_select_message(session, base_url, auth)
 
-    # Wait for a valid session (champ select)
-    session = await wait_for_champ_select(base_url, auth)
-    send_champ_select_message(session, base_url, auth)
+        swap_role(session, base_url, auth, config)
+        time.sleep(18)  # wait for role swap to complete
+        print("[Role Swap] Role swap phase ended")
 
-    swap_role(session, base_url, auth, config)
-    time.sleep(18)  # wait for role swap to complete
-    print("[Role Swap] Role swap phase ended")
+        # Run pick_and_ban and swap_pick_position concurrently in separate threads
+        pick_ban_thread = threading.Thread(
+            target=pick_and_ban, args=(base_url, auth, config)
+        )
+        swap_position_thread = threading.Thread(
+            target=swap_pick_position, args=(base_url, auth)
+        )
 
-    # Run pick_and_ban and swap_pick_position concurrently in separate threads
-    pick_ban_thread = threading.Thread(
-        target=pick_and_ban, args=(base_url, auth, config)
-    )
-    swap_position_thread = threading.Thread(
-        target=swap_pick_position, args=(base_url, auth)
-    )
+        pick_ban_thread.daemon = True
+        swap_position_thread.daemon = True
 
-    pick_ban_thread.daemon = True
-    swap_position_thread.daemon = True
+        pick_ban_thread.start()
+        swap_position_thread.start()
 
-    pick_ban_thread.start()
-    swap_position_thread.start()
-    
-    # Wait for both threads to complete (they will run until champ select ends)
-    pick_ban_thread.join()
-    swap_position_thread.join()
+        # Wait for both threads to complete (they will run until champ select ends)
+        pick_ban_thread.join()
+        swap_position_thread.join()
+
+        time.sleep(1)
 
 
 if __name__ == "__main__":
