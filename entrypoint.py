@@ -10,6 +10,7 @@ import threading
 
 from accept_queue import accept_queue
 from pick_and_ban import pick_and_ban
+from position_swap_handler import decline_incoming_swap_requests
 from swap_role import swap_role
 from swap_pick_position import swap_pick_position
 from send_message import send_champ_select_message
@@ -58,7 +59,7 @@ def main():
         time.sleep(18)  # wait for role swap to complete
         print("[Role Swap] Role swap phase ended")
 
-        # Run pick_and_ban and swap_pick_position concurrently in separate threads
+        # Run concurrently in separate threads
         pick_ban_thread = threading.Thread(
             target=pick_and_ban, args=(base_url, auth, config)
         )
@@ -66,15 +67,22 @@ def main():
             target=swap_pick_position, args=(base_url, auth)
         )
 
+        decline_incoming_swap_requests_thread = threading.Thread(
+            target=decline_incoming_swap_requests, args=(base_url, auth)
+        )
+
         pick_ban_thread.daemon = True
         swap_position_thread.daemon = True
+        decline_incoming_swap_requests_thread.daemon = True
 
         pick_ban_thread.start()
         swap_position_thread.start()
+        decline_incoming_swap_requests_thread.start()
 
-        # Wait for both threads to complete (they will run until champ select ends)
+        # Wait for threads to complete (they will run until champ select ends)
         pick_ban_thread.join()
         swap_position_thread.join()
+        decline_incoming_swap_requests_thread.join()
 
         time.sleep(1)
 

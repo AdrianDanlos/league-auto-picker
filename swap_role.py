@@ -51,7 +51,7 @@ def swap_role(session, base_url, auth, config):
         if participant.get("cellId") == my_cell_id:
             assigned_role = participant.get("assignedPosition")
             break
-        
+
     if not assigned_role:
         print("[Role Swap] Could not determine assigned role.")
         return
@@ -82,21 +82,13 @@ def swap_role(session, base_url, auth, config):
     target_cell_id = swap_target["cellId"]
     swap_id = None
 
-    # Debug: Print positionSwaps structure
-    print(f"[Role Swap] Available position swaps: {position_swaps}")
-    print(f"[Role Swap] Looking for swap with target cellId: {target_cell_id}")
-
     for swap in position_swaps:
-        # The structure may vary, but typically there will be a cellId or similar field
-        # Try to match the swap that involves the target cellId
-        print(f"[Role Swap] Checking swap: {swap}")
         if (
             swap.get("cellId") == target_cell_id
             or swap.get("targetCellId") == target_cell_id
             or swap.get("receiverCellId") == target_cell_id
         ):
             swap_id = swap.get("id")
-            print(f"[Role Swap] Found matching swap with ID: {swap_id}")
             break
 
     if not swap_id:
@@ -114,7 +106,7 @@ def swap_role(session, base_url, auth, config):
         request_res = requests.post(request_swap_url, auth=auth, verify=False)
         if request_res.status_code == 204 or request_res.status_code == 200:
             print(
-                f"[Role Swap] Successfully requested swap with {preferred_role} (cellId {target_cell_id}, swapId {swap_id})"
+                f"[Role Swap] Requested role swap with {preferred_role} (cellId {target_cell_id}, swapId {swap_id})"
             )
         else:
             print(
