@@ -10,15 +10,32 @@ def swap_role(session, base_url, auth, config):
     is assigned to their preferred role. If not, it attempts to find a teammate with
     the preferred role and requests a position swap.
 
+    The function performs the following steps:
+    1. Checks for ongoing position swaps to avoid conflicts
+    2. Determines the user's currently assigned role
+    3. Compares assigned role with preferred role from config
+    4. Searches for teammates with the preferred role
+    5. Requests position swap if suitable teammate is found
+
+    API Endpoints Used:
+        - GET /lol-champ-select/v1/ongoing-position-swap
+        - POST /lol-champ-select/v1/session/position-swaps/{swapId}/request
+
     Args:
-        session (dict): The League Client API session object containing team information,
-                      position swaps, and local player data
-        base_url (str): The base URL for the League Client API
-        auth (tuple): Authentication credentials for the API requests
-        config (dict): Configuration dictionary containing the 'preferred_role' setting
+        session (dict): The League Client API session object containing:
+            - localPlayerCellId (int): The cell ID of the local player
+            - myTeam (list): List of team participants with cellId and assignedPosition
+            - positionSwaps (list): Available position swap options with id, cellId, etc.
+        base_url (str): The base URL for the League Client API (e.g., "https://127.0.0.1:2999")
+        auth (tuple): Authentication credentials for the API requests (username, password)
+        config (dict): Configuration dictionary containing:
+            - preferred_role (str): The user's preferred role (e.g., "TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY")
 
     Returns:
         None: Function returns None in all cases (void function)
+
+    Raises:
+        No exceptions are raised; all errors are handled internally with logging
 
     Behavior:
         - Checks for ongoing position swaps and skips if one is detected
@@ -26,6 +43,7 @@ def swap_role(session, base_url, auth, config):
         - Searches for teammates with the preferred role
         - Requests position swap if suitable teammate is found
         - Handles API errors gracefully with appropriate logging
+        - Recursively calls itself if no swap ID is found (retry mechanism)
     """
     # Check if session is undefined or None (Someone dodged)
     if not session:

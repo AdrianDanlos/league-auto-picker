@@ -10,8 +10,8 @@ def swap_pick_position(base_url, auth):
     Automatically requests pick order swaps to move to the 5th pick position.
 
     This function continuously attempts to swap pick positions until the user reaches
-    the 5th pick position. It handles incoming swap requests intelligently and
-    manages ongoing swaps to ensure smooth operation.
+    the 5th pick position. It intelligently handles ongoing swaps and manages
+    swap requests to ensure smooth operation.
 
     Args:
         base_url (str): The base URL for the League Client API
@@ -24,31 +24,27 @@ def swap_pick_position(base_url, auth):
         The function operates in a continuous loop with the following steps:
 
         1. Check if already in 5th position - if so, exit
-        2. Handle incoming pick order swap requests:
-           - Accept requests from players below your pick order (moves you later)
-           - Decline requests from players above your pick order (moves you earlier)
-        3. Wait for any ongoing pick order swap in the lobby to complete
-        4. Re-fetch session data to get current pick orders
-        5. Find valid swap targets (players below your pick order):
+        2. Wait for any ongoing pick order swap in the lobby to complete
+        3. Re-fetch session data to get current pick orders
+        4. Find valid swap targets (players below your pick order):
            - Skip players already attempted in this round
            - Skip 5th TOP unless you are 4th pick
            - Prioritize highest pick order targets first
-        6. Request swap with the best available target
-        7. Repeat steps 2-6 until no valid targets remain
-        8. Reset and try again from the beginning (in case new targets become available)
+        5. Request swap with the best available target
+        6. Repeat steps 2-5 until no valid targets remain
+        7. Reset and try again from the beginning (in case new targets become available)
 
     API Endpoints Used:
         - GET /lol-champ-select/v1/session (via get_session)
         - GET /lol-champ-select/v1/ongoing-pick-order-swap
         - POST /lol-champ-select/v1/session/pick-order-swaps/{id}/request
-        - POST /lol-champ-select/v1/session/pick-order-swaps/{id}/accept
-        - POST /lol-champ-select/v1/session/pick-order-swaps/{id}/decline
 
     Notes:
         - The function continues running until you reach 5th position or encounter an error
-        - Includes intelligent handling of incoming swap requests
-        - Implements timeout mechanisms for ongoing swaps
+        - Implements timeout mechanisms for ongoing swaps (up to 15 seconds)
         - Tracks attempted swaps to avoid infinite loops
+        - Handles session errors gracefully (e.g., when someone dodges)
+        - Prioritizes targets with higher pick orders for more efficient swapping
     """
     # Check if session is undefined or None (Someone dodged)
     if not get_session(base_url, auth):
@@ -82,7 +78,7 @@ def swap_pick_position(base_url, auth):
         while True:
             # 1. Wait for any ongoing pick order swap to complete
             wait_count = 0
-            while wait_count < 10:  # Wait up to 20 seconds
+            while wait_count < 5:  # Wait up to 15 seconds
                 try:
                     ongoing_swap_url = (
                         f"{base_url}/lol-champ-select/v1/ongoing-pick-order-swap"
@@ -96,7 +92,7 @@ def swap_pick_position(base_url, auth):
                             print(
                                 f"[Pick Swap] Waiting for ongoing pick order swap to complete... ({wait_count + 1}/10)"
                             )
-                            time.sleep(2)
+                            time.sleep(3)
                             wait_count += 1
                             continue
                         else:

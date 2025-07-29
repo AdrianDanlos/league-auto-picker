@@ -19,6 +19,7 @@ def decline_incoming_swap_requests(base_url, auth):
     """
     while True:
         try:
+            print("READY TO DECLINE")
             time.sleep(1)
             position_swaps_url = (
                 f"{base_url}/lol-champ-select/v1/session/position-swaps"
@@ -26,6 +27,7 @@ def decline_incoming_swap_requests(base_url, auth):
             position_swaps_res = requests.get(
                 position_swaps_url, auth=auth, verify=False
             )
+            print("position_swaps_res:", position_swaps_res)
 
             if position_swaps_res.status_code == 200:
                 position_swaps = position_swaps_res.json()
@@ -58,8 +60,8 @@ def decline_incoming_swap_requests(base_url, auth):
                             )
                     else:
                         print("[Pick Swap] No valid swap ID found in received swaps")
-                else:
-                    print("[Pick Swap] No received position swap requests to decline")
+                # else:
+                #     print("[Pick Swap] No received position swap requests to decline")
             else:
                 print(
                     f"[Pick Swap] Failed to fetch position swaps: {position_swaps_res.status_code}"

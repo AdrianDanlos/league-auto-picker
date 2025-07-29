@@ -10,7 +10,7 @@ import threading
 
 from accept_queue import accept_queue
 from pick_and_ban import pick_and_ban
-from position_swap_handler import decline_incoming_swap_requests
+from decline_swap_requests import decline_incoming_swap_requests
 from swap_role import swap_role
 from swap_pick_position import swap_pick_position
 from send_message import send_champ_select_message
