@@ -72,11 +72,20 @@ def find_best_counter_pick(
                 counter_id = champion_ids.get(counter_champ)
 
                 # Skip if champion is prepicked by teammate
-                if counter_id in prepicked_champion_ids:
+                # Add type checking to prevent "unhashable type: 'list'" error
+                if (
+                    counter_id is not None
+                    and isinstance(counter_id, (int, str))
+                    and counter_id in prepicked_champion_ids
+                ):
                     continue
 
                 # If this counter is available and appears earlier in the list
-                if counter_id and i < earliest_position:
+                if (
+                    counter_id
+                    and isinstance(counter_id, (int, str))
+                    and i < earliest_position
+                ):
                     best_pick = counter_champ
                     earliest_position = i
                     break  # Found the earliest available counter for this enemy
@@ -88,14 +97,29 @@ def pick_and_ban(base_url, auth, config):
     """
     Continuously monitors the League of Legends champion select session and automates the pick and ban process.
 
-    This function:
-    - Periodically fetches the current champion select session.
-    - Determines the assigned lane for the local player.
-    - Monitors the current phase (ban/pick/finalization) and only acts during relevant phases.
-    - For bans: Attempts to ban champions specified in the config for the player's lane.
-    - For picks: Attempts to pick the best available counter to enemy champions based on config, or falls back to default picks if no counter is found.
-    - Skips champions already prepicked (hovered or locked in) by teammates.
-    - Handles errors and session end gracefully, and can be stopped by KeyboardInterrupt.
+    ---
+    PICK LOGIC:
+    1. The function periodically fetches the current champion select session and determines your assigned lane (e.g., TOP, JUNGLE, etc.).
+    2. It collects all champion IDs that are already prepicked (hovered or locked in) by your teammates, so it will not attempt to pick these champions.
+    3. When it is your turn to pick (i.e., your action is in progress and the phase is PICK): (CONFIG MATCHUPS FROM PATCH 15.14)
+        a. It gathers the list of enemy champions that have already been picked or are being hovered.
+        b. It looks up your lane's pick configuration from the config file (config["picks"][LANE]).
+        c. For each enemy champion, it checks if there is a counter-pick list for that champion in your lane's config. It iterates through the counter-pick list in order, and selects the first champion that:
+            - Is present in the champion ID map
+            - Is NOT already prepicked by a teammate
+        d. If multiple enemy champions have counter-picks available, the function prioritizes the champion that appears at the earliest index position across all counter lists. For example:
+            - If enemy A has counter list ["Champ1", "Champ2", "Champ3"] and Champ2 is available (index 1)
+            - If enemy B has counter list ["Champ4", "Champ1", "Champ5"] and Champ1 is available (index 1)
+            - The function will pick Champ1 because it appears at index 1 in enemy B's list, which is earlier than Champ2 at index 1 in enemy A's list
+        e. If a suitable counter-pick is found, it attempts to pick that champion.
+        f. If no counter-pick is found for any enemy champion, it falls back to the default pick list for your lane (config["picks"]["DEFAULT"][LANE]). It iterates through the default picks in order, and selects the first champion that is available and not prepicked by a teammate.
+        g. If a pick is successfully made (API returns 204), it prints a success message and stops further pick attempts for this round.
+        h. If no suitable champion is found (all are prepicked or unavailable), it prints a failure message and does not pick.
+    4. The process repeats every 4 seconds until the session ends or is interrupted.
+
+    BAN LOGIC:
+    - When it is your turn to ban, it attempts to ban the champion specified for your lane in config["bans"][LANE].
+    - If the ban is successful, it prints a success message; otherwise, it prints a failure message.
 
     Args:
         base_url (str): The base URL for the League Client API.
@@ -142,7 +166,14 @@ def pick_and_ban(base_url, auth, config):
                         and action["actorCellId"] in my_team_cell_ids
                         and action.get("championId", 0) not in (0, None)
                     ):
-                        prepicked_champion_ids.add(action["championId"])
+                        champion_id = action["championId"]
+                        # Add type checking to ensure we only add valid champion IDs
+                        if isinstance(champion_id, (int, str)):
+                            prepicked_champion_ids.add(champion_id)
+                        else:
+                            print(
+                                f"⚠️ Warning: Invalid champion ID type: {type(champion_id)}, value: {champion_id}"
+                            )
             # --- End new logic ---
 
             for action_group in actions:
@@ -182,6 +213,15 @@ def pick_and_ban(base_url, auth, config):
                             enemy_champions = get_enemy_champions(session, CHAMPION_IDS)
 
                             # Try to find best counter-pick based on enemy champions
+                            # Add debugging to help identify the issue
+                            print(f"🔍 Debug: enemy_champions = {enemy_champions}")
+                            print(
+                                f"🔍 Debug: lane_picks_config keys = {list(lane_picks_config.keys())}"
+                            )
+                            print(
+                                f"🔍 Debug: prepicked_champion_ids = {prepicked_champion_ids}"
+                            )
+
                             best_pick = find_best_counter_pick(
                                 enemy_champions,
                                 lane_picks_config,

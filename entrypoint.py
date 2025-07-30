@@ -81,6 +81,8 @@ def main():
         swap_position_thread.join()
         decline_incoming_swap_requests_thread.join()
 
+        print("🟡 Session ended. Stopping pick and ban monitoring.")
+        
         time.sleep(1)
 
 
