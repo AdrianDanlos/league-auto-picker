@@ -5,7 +5,6 @@ import json
 import urllib3
 import psutil
 import re
-import asyncio
 import threading
 
 from accept_queue import accept_queue
@@ -82,7 +81,7 @@ def main():
         decline_incoming_swap_requests_thread.join()
 
         print("🟡 Session ended. Stopping pick and ban monitoring.")
-        
+
         time.sleep(1)
 
 

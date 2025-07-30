@@ -58,19 +58,32 @@ def find_best_counter_pick(
     Returns the champion name to pick, or None if no suitable pick found.
     """
     if not enemy_champions:
+        print("🔍 Debug: No enemy champions found")
         return None
+
+    print(
+        f"🔍 Debug: Searching for counters against enemy champions: {enemy_champions}"
+    )
+    print(f"🔍 Debug: Available counter champions: {list(lane_picks_config.keys())}")
 
     best_pick = None
     earliest_position = float("inf")
 
     # Check each enemy champion
     for enemy_champ in enemy_champions:
-        if enemy_champ in lane_picks_config:
-            counter_list = lane_picks_config[enemy_champ]
+        print(f"🔍 Debug: Checking enemy champion: {enemy_champ}")
+        # Search through all lane configs to find which champion has this enemy as a counter
+        for counter_champ, counter_list in lane_picks_config.items():
+            if enemy_champ in counter_list:
+                # Found the enemy champion in this counter list
+                enemy_index = counter_list.index(enemy_champ)
+                print(
+                    f"🔍 Debug: Found {enemy_champ} in {counter_champ}'s counter list at position {enemy_index}"
+                )
 
-            # Check each counter in the list
-            for i, counter_champ in enumerate(counter_list):
+                # Check if the counter champion is available
                 counter_id = champion_ids.get(counter_champ)
+                print(f"🔍 Debug: {counter_champ} has ID: {counter_id}")
 
                 # Skip if champion is prepicked by teammate
                 # Add type checking to prevent "unhashable type: 'list'" error
@@ -79,18 +92,29 @@ def find_best_counter_pick(
                     and isinstance(counter_id, (int, str))
                     and counter_id in prepicked_champion_ids
                 ):
+                    print(
+                        f"🔍 Debug: Skipping {counter_champ} - already prepicked by teammate"
+                    )
                     continue
 
                 # If this counter is available and appears earlier in the list
                 if (
                     counter_id
                     and isinstance(counter_id, (int, str))
-                    and i < earliest_position
+                    and enemy_index < earliest_position
                 ):
+                    print(
+                        f"🔍 Debug: New best pick found! {counter_champ} (enemy at position {enemy_index})"
+                    )
                     best_pick = counter_champ
-                    earliest_position = i
+                    earliest_position = enemy_index
                     break  # Found the earliest available counter for this enemy
+                else:
+                    print(
+                        f"🔍 Debug: {counter_champ} not selected - position {enemy_index} >= {earliest_position} or not available"
+                    )
 
+    print(f"🔍 Debug: Final best pick: {best_pick}")
     return best_pick
 
 
@@ -135,8 +159,7 @@ def pick_and_ban(base_url, auth, config):
 
             # Check if session is undefined or None
             if not session:
-                print("🟡 Session ended. Stopping pick and ban monitoring.")
-                break
+                return
 
             CHAMPION_IDS = fetch_champion_ids()
             actions = session.get("actions", [])
@@ -231,6 +254,7 @@ def pick_and_ban(base_url, auth, config):
                             )
 
                             # If no counter-pick found, use DEFAULT
+                            print(f"🔍 Debug: No counter pick found = {best_pick}")
                             if not best_pick:
                                 default_picks = (
                                     config["picks"].get("DEFAULT", {}).get(lane_key, [])

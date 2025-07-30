@@ -31,7 +31,8 @@
         "Irelia",
         "Aatrox"
       ],
-      "Sion": ["Yorick", "Nasus", "Illaoi", "Pantheon", "Yasuo"]
+      "Sion": ["Yorick", "Nasus", "Illaoi", "Pantheon", "Yasuo"],
+      "Galio": ["Akali", "Rumble"]
     },
     "MIDDLE": {
       "Diana": [

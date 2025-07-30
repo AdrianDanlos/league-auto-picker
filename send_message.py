@@ -2,12 +2,10 @@
 import requests
 import random
 import json
-import time
+import threading
 
 
 def send_champ_select_message(session, base_url, auth):
-    time.sleep(4) # Give some time for the lobby to be fully initialized
-
     # Load messages from config file
     with open("config.json", "r") as f:
         config = json.load(f)
@@ -38,3 +36,21 @@ def send_champ_select_message(session, base_url, auth):
     else:
         print("[Chat] Could not find chatId in session. Session object:")
         print(session)
+
+
+def schedule_champ_select_message(session, base_url, auth, delay=15):
+    """
+    Schedule the champ select message to be sent after a delay without blocking the main thread.
+
+    Args:
+        session: The session object
+        base_url: The base URL for the API
+        auth: Authentication credentials
+        delay: Delay in seconds before sending the message (default: 15)
+    """
+    timer = threading.Timer(
+        delay, send_champ_select_message, args=(session, base_url, auth)
+    )
+    timer.start()
+    print(f"[Chat] Scheduled message to be sent in {delay} seconds")
+    return timer
