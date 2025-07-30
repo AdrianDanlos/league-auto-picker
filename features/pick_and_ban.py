@@ -253,8 +253,8 @@ def pick_and_ban(base_url, auth, config):
                             )
 
                             # If no counter-pick found, use DEFAULT
-                            print(f"🔍 Debug: No counter pick found = {best_pick}")
                             if not best_pick:
+                                print(f"🔍 Debug: No counter pick found = {best_pick}")
                                 default_picks = (
                                     config["picks"].get("DEFAULT", {}).get(lane_key, [])
                                 )
