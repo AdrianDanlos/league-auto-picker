@@ -1,6 +1,7 @@
 # flake8: noqa: E501
 import requests
 import time
+import random
 
 from utils import get_session
 
@@ -235,6 +236,8 @@ def pick_and_ban(base_url, auth, config):
                                     config["picks"].get("DEFAULT", {}).get(lane_key, [])
                                 )
                                 if default_picks:
+                                    # Filter available default picks (not prepicked by teammates)
+                                    available_defaults = []
                                     for default_champ in default_picks:
                                         default_champ_id = CHAMPION_IDS.get(
                                             default_champ
@@ -244,8 +247,11 @@ def pick_and_ban(base_url, auth, config):
                                             and default_champ_id
                                             not in prepicked_champion_ids
                                         ):
-                                            best_pick = default_champ
-                                            break
+                                            available_defaults.append(default_champ)
+
+                                    # Pick a random available default
+                                    if available_defaults:
+                                        best_pick = random.choice(available_defaults)
 
                             if best_pick:
                                 champ_id = CHAMPION_IDS.get(best_pick)

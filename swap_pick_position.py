@@ -182,9 +182,9 @@ def swap_pick_position(base_url, auth):
                     and "INVALID" not in res.text
                     and "DECLINED" not in res.text
                 ):
-                    print(
-                        f"[Pick Swap] Requested swap with {assigned_position} at pick order {pick_order} (cellId {cell_id}, swapId {swap_id})"
-                    )
+                    # print(
+                    #     f"[Pick Swap] Requested swap with {assigned_position} at pick order {pick_order} (cellId {cell_id}, swapId {swap_id})"
+                    # )
                     # Wait a bit after successful request to let it process
                     time.sleep(3)
                 else:
