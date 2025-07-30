@@ -85,6 +85,23 @@ def find_best_counter_pick(
 
 
 def pick_and_ban(base_url, auth, config):
+    """
+    Continuously monitors the League of Legends champion select session and automates the pick and ban process.
+
+    This function:
+    - Periodically fetches the current champion select session.
+    - Determines the assigned lane for the local player.
+    - Monitors the current phase (ban/pick/finalization) and only acts during relevant phases.
+    - For bans: Attempts to ban champions specified in the config for the player's lane.
+    - For picks: Attempts to pick the best available counter to enemy champions based on config, or falls back to default picks if no counter is found.
+    - Skips champions already prepicked (hovered or locked in) by teammates.
+    - Handles errors and session end gracefully, and can be stopped by KeyboardInterrupt.
+
+    Args:
+        base_url (str): The base URL for the League Client API.
+        auth (tuple): Authentication tuple (username, password) for the API.
+        config (dict): Configuration dictionary containing pick and ban preferences.
+    """
     print("🔄 Starting continuous pick and ban monitoring...")
 
     while True:
@@ -138,33 +155,28 @@ def pick_and_ban(base_url, auth, config):
                             continue
 
                         if action["type"] == "ban":
-                            # Ban logic remains the same
-                            champ_list = config["bans"].get(lane_key, [])
-                            for champ in champ_list:
-                                champ_id = CHAMPION_IDS.get(champ)
-                                if champ_id:
+                            champ = config["bans"].get(lane_key, None)
+                            champ_id = CHAMPION_IDS.get(champ)
+                            if champ_id:
+                                res = requests.patch(
+                                    f"{base_url}/lol-champ-select/v1/session/actions/"
+                                    f"{action['id']}",
+                                    json={
+                                        "championId": champ_id,
+                                        "completed": True,
+                                    },
+                                    auth=auth,
+                                    verify=False,
+                                )
+                                if res.status_code == 204:
+                                    print(f"✅ Banned {champ}!")
+                                else:
                                     print(
-                                        f"Trying to ban {champ} " f"(ID {champ_id})..."
+                                        f"❌ Failed to ban {champ}: "
+                                        f"{res.status_code}"
                                     )
-                                    res = requests.patch(
-                                        f"{base_url}/lol-champ-select/v1/session/actions/"
-                                        f"{action['id']}",
-                                        json={
-                                            "championId": champ_id,
-                                            "completed": True,
-                                        },
-                                        auth=auth,
-                                        verify=False,
-                                    )
-                                    if res.status_code == 204:
-                                        print(f"✅ Banned {champ}!")
-                                        break
-                                    else:
-                                        print(
-                                            f"❌ Failed to ban {champ}: "
-                                            f"{res.status_code}"
-                                        )
-                        else:
+
+                        elif action["type"] == "pick":
                             # New pick logic
                             lane_picks_config = config["picks"].get(lane_key, {})
                             enemy_champions = get_enemy_champions(session, CHAMPION_IDS)
