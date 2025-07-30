@@ -176,8 +176,7 @@
         "Lux",
         "Sylas",
         "Mel"
-      ],
-      "Sion": ["Yorick", "Nasus", "Illaoi", "Pantheon", "Yasuo"]
+      ]
     },
     "DEFAULT": {
       "TOP": ["Malphite", "Sion", "Cho'Gath"],
