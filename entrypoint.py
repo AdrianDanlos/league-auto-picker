@@ -1,4 +1,3 @@
-# flake8: noqa: E501
 import time
 import requests
 import json
@@ -12,7 +11,7 @@ from pick_and_ban import pick_and_ban
 from decline_swap_requests import decline_incoming_swap_requests
 from swap_role import swap_role
 from swap_pick_position import swap_pick_position
-from send_message import send_champ_select_message
+from send_message import schedule_champ_select_message
 from utils import get_session
 
 # Disable warnings for self-signed certs
@@ -52,7 +51,7 @@ def main():
         # Wait for a valid session (champ select)
         # This blocks until queue is accepted
         session = wait_for_champ_select(base_url, auth)
-        send_champ_select_message(session, base_url, auth)
+        schedule_champ_select_message(session, base_url, auth)
         swap_role(session, base_url, auth, config)
 
         # Run concurrently in separate threads

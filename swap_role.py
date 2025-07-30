@@ -1,8 +1,5 @@
-# flake8: noqa: E501
 import requests
 import time
-
-from utils import get_session
 
 
 def swap_role(session, base_url, auth, config):
@@ -113,9 +110,7 @@ def swap_role(session, base_url, auth, config):
     request_swap_url = (
         f"{base_url}/lol-champ-select/v1/session/position-swaps/{swap_id}/request"
     )
-    check_swap_url = (
-        f"{base_url}/lol-champ-select/v1/session/position-swaps"
-    )
+    check_swap_url = f"{base_url}/lol-champ-select/v1/session/position-swaps"
 
     try:
         request_res = requests.post(request_swap_url, auth=auth, verify=False)
@@ -134,8 +129,13 @@ def swap_role(session, base_url, auth, config):
                 wait_time += 1
 
                 try:
-                    position_swaps_res = requests.get(check_swap_url, auth=auth, verify=False)
-                    if position_swaps_res.status_code == 204 or position_swaps_res.status_code == 200:
+                    position_swaps_res = requests.get(
+                        check_swap_url, auth=auth, verify=False
+                    )
+                    if (
+                        position_swaps_res.status_code == 204
+                        or position_swaps_res.status_code == 200
+                    ):
                         # find a position swap with the swap_id declared above
                         position_swaps = position_swaps_res.json()
                         for position_swap in position_swaps:
@@ -144,9 +144,7 @@ def swap_role(session, base_url, auth, config):
                                 break
 
                     else:
-                        print(
-                            f"[Role Swap] Error: {position_swaps_res.status_code}"
-                        )
+                        print(f"[Role Swap] Error: {position_swaps_res.status_code}")
 
                     if not position_swap:
                         print(
@@ -156,10 +154,10 @@ def swap_role(session, base_url, auth, config):
                     # Check trade state
                     position_swap_state = position_swap.get("state")
                     if position_swap_state == "AVAILABLE":
-                        print(f"[Role Swap] ✅ Accepted!")
+                        print("[Role Swap] ✅ Accepted!")
                         return
                     elif position_swap_state == "INVALID":
-                        print(f"[Role Swap] ❌ Declined")
+                        print("[Role Swap] ❌ Declined")
                         return
                     elif position_swap_state == "CANCELLED":
                         print(f"[Role Swap] ⚠️ State {position_swap_state} not handled")
@@ -168,7 +166,7 @@ def swap_role(session, base_url, auth, config):
                 except Exception:
                     continue
 
-            print(f"[Role Swap] ⏰ Timeout")
+            print("[Role Swap] ⏰ Timeout")
         else:
             print(
                 f"[Role Swap] Role swap error: {request_res.status_code} {request_res.text}"

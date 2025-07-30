@@ -1,5 +1,5 @@
-# flake8: noqa: E501
 import requests
+
 
 def get_session(base_url, auth):
     r = requests.get(f"{base_url}/lol-champ-select/v1/session", auth=auth, verify=False)

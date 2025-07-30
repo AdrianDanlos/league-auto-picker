@@ -1,5 +1,3 @@
-# flake8: noqa: E501
-
 import requests
 import time
 from utils import get_session, get_pick_order
