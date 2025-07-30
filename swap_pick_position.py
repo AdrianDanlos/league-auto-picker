@@ -78,7 +78,7 @@ def swap_pick_position(base_url, auth):
         while True:
             # 1. Wait for any ongoing pick order swap to complete
             wait_count = 0
-            while wait_count < 5:  # Wait up to 15 seconds
+            while wait_count < 10:  # Wait up to 30 seconds
                 try:
                     ongoing_swap_url = (
                         f"{base_url}/lol-champ-select/v1/ongoing-pick-order-swap"

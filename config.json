@@ -1,34 +1,191 @@
 {
   "bans": {
-    "TOP": ["Darius"],
-    "JUNGLE": ["Lee Sin"],
+    "TOP": ["Dr. Mundo"],
+    "JUNGLE": ["Master Yi"],
     "MIDDLE": ["Hwei"],
-    "BOTTOM": ["Draven"],
-    "UTILITY": ["Yuumi"]
+    "BOTTOM": ["Kaisa"],
+    "UTILITY": ["Rell"]
   },
   "picks": {
-    "TOP": ["Galio", "Malphite"],
-    "JUNGLE": [""],
-    "MIDDLE": [
-      "Diana",
-      "Aurelion Sol",
-      "Ahri",
-      "Kassadin",
-      "Syndra",
-      "Fizz",
-      "Galio",
-      "Leblanc",
-      "Annie",
-      "Lissandra",
-      "Zed",
-      "Orianna",
-      "Viktor",
-      "Vladimir",
-      "Veigar",
-      "Malphite"
-    ],
-    "BOTTOM": [""],
-    "UTILITY": ["Leona", "Blitzcrank"]
+    "TOP": {
+      "Cho'Gath": [
+        "Heimerdinger",
+        "Malphite",
+        "Singed",
+        "Gangplank",
+        "Yasuo",
+        "Jayce",
+        "Rumble",
+        "K'Sante"
+      ],
+      "Malphite": [
+        "Vayne",
+        "Trundle",
+        "Tryndamere",
+        "Quinn",
+        "Gnar",
+        "Yasuo",
+        "Riven",
+        "Jayce",
+        "Rumble",
+        "Irelia",
+        "Aatrox"
+      ],
+      "Sion": ["Yorick", "Nasus", "Illaoi", "Pantheon", "Yasuo"]
+    },
+    "MIDDLE": {
+      "Diana": [
+        "Annie",
+        "Yone",
+        "Malzahar",
+        "Lux",
+        "Leblanc",
+        "Azir",
+        "Fizz",
+        "Aurora",
+        "Katarina",
+        "Orianna",
+        "Akshan",
+        "Zed",
+        "Xerath",
+        "Hwei",
+        "Qiyana",
+        "Vex",
+        "Veigar"
+      ],
+      "Aurelion Sol": [
+        "Smolder",
+        "Orianna",
+        "Mel",
+        "Irelia",
+        "Yasuo",
+        "Taliyah",
+        "Sylas",
+        "Syndra",
+        "Viktor",
+        "Hwei",
+        "Lissandra"
+      ],
+      "Ahri": [
+        "Smolder",
+        "Aurelion Sol",
+        "Galio",
+        "Hwei",
+        "Yone",
+        "Ziggs",
+        "Azir"
+      ],
+      "Kassadin": [
+        "Taliyah",
+        "Kayle",
+        "Mel",
+        "Viktor",
+        "Leblanc",
+        "Hwei",
+        "Talon",
+        "Aurelion Sol",
+        "Katarina",
+        "Irelia",
+        "Zoe",
+        "Annie",
+        "Anivia"
+      ],
+      "Fizz": [
+        "Aurelion Sol",
+        "Mel",
+        "Hwei",
+        "Xerath",
+        "Lux",
+        "Malzahar",
+        "Smolder",
+        "Syndra",
+        "Azir",
+        "Taliyah",
+        "Qiyana",
+        "Irelia",
+        "Yone",
+        "Katarina",
+        "Ziggs"
+      ],
+      "Galio": [
+        "Ryze",
+        "Jayce",
+        "Viktor",
+        "Diana",
+        "Sylas",
+        "Akali",
+        "Kassadin",
+        "Ekko",
+        "Vladimir",
+        "Fizz",
+        "Aurelion Sol",
+        "Mel",
+        "Azir",
+        "Katarina",
+        "Malzahar"
+      ],
+      "Lissandra": [
+        "Yasuo",
+        "Smolder",
+        "Katarina",
+        "Fizz",
+        "Ryze",
+        "Yone",
+        "Aurora",
+        "Malzahar",
+        "Vex",
+        "Akali",
+        "Azir",
+        "Lux",
+        "Veigar",
+        "Taliyah",
+        "Talon"
+      ],
+      "Orianna": [
+        "Corki",
+        "Yone",
+        "Vladimir",
+        "Mel",
+        "Ahri",
+        "Kassadin",
+        "Twisted Fate"
+      ],
+      "Viktor": ["Smolder", "Mel", "Azir", "Ryze", "Ziggs"],
+      "Malphite": ["Talon", "Zed", "Smolder", "Mel", "Azir", "Ryze", "Ziggs"],
+      "Ziggs": ["Cassiopeia", "Lux", "Smolder"]
+    },
+    "UTILITY": {
+      "Leona": [
+        "Mel",
+        "Maokai",
+        "Elise",
+        "Tahm Kench",
+        "Nautilus",
+        "Blitzcrank",
+        "Yuumi",
+        "Lux",
+        "Pantheon",
+        "Zyra"
+      ],
+      "Blitzcrank": [
+        "Xerath",
+        "Pantheon",
+        "Zyra",
+        "Swain",
+        "Senna",
+        "Lux",
+        "Sylas",
+        "Mel"
+      ],
+      "Sion": ["Yorick", "Nasus", "Illaoi", "Pantheon", "Yasuo"]
+    },
+    "DEFAULT": {
+      "TOP": ["Malphite", "Sion", "Cho'Gath"],
+      "JUNGLE": ["Diana"],
+      "MIDDLE": ["Diana", "Galio", "Fizz"],
+      "BOTTOM": ["Ziggs"],
+      "UTILITY": ["Leona", "Blitzcrank"]
+    }
   },
   "preferred_role": "middle",
   "messages": [

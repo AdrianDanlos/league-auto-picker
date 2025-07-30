@@ -37,7 +37,7 @@ def get_lcu_credentials():
 def wait_for_champ_select(base_url, auth):
     """Synchronous version - blocks until champ select starts"""
     while True:
-        accept_queue(base_url, auth)  
+        accept_queue(base_url, auth)
         # After accept_queue returns, get the champ select session once
         session = get_session(base_url, auth)
         return session
@@ -52,12 +52,9 @@ def main():
     while not get_session(base_url, auth):
         # Wait for a valid session (champ select)
         # This blocks until queue is accepted
-        session = wait_for_champ_select(base_url, auth) 
+        session = wait_for_champ_select(base_url, auth)
         send_champ_select_message(session, base_url, auth)
-
         swap_role(session, base_url, auth, config)
-        time.sleep(18)  # wait for role swap to complete
-        print("[Role Swap] Role swap phase ended")
 
         # Run concurrently in separate threads
         pick_ban_thread = threading.Thread(

@@ -1,5 +1,8 @@
 # flake8: noqa: E501
 import requests
+import time
+
+from utils import get_session
 
 
 def swap_role(session, base_url, auth, config):
@@ -47,17 +50,6 @@ def swap_role(session, base_url, auth, config):
     """
     # Check if session is undefined or None (Someone dodged)
     if not session:
-        return
-
-    # Check for ongoing position swap requests
-    try:
-        ongoing_swap_url = f"{base_url}/lol-champ-select/v1/ongoing-position-swap"
-        ongoing_res = requests.get(ongoing_swap_url, auth=auth, verify=False)
-        if ongoing_res.status_code == 200 and ongoing_res.json():
-            print("[Role Swap] Ongoing position swap detected. Skipping role swap.")
-            return
-    except Exception as e:
-        print(f"[Role Swap] Error checking ongoing swap: {e}")
         return
 
     my_cell_id = session.get("localPlayerCellId")
@@ -109,6 +101,7 @@ def swap_role(session, base_url, auth, config):
             swap_id = swap.get("id")
             break
 
+    # FIXME: i think this happens when 2 swaps are requested at the same time? hard to reproduce
     if not swap_id:
         print(f"[Role Swap] No position swap found for cellId {target_cell_id}.")
         print(f"[Role Swap] Available swaps: {position_swaps}")
@@ -120,17 +113,65 @@ def swap_role(session, base_url, auth, config):
     request_swap_url = (
         f"{base_url}/lol-champ-select/v1/session/position-swaps/{swap_id}/request"
     )
+    check_swap_url = (
+        f"{base_url}/lol-champ-select/v1/session/position-swaps"
+    )
+
     try:
         request_res = requests.post(request_swap_url, auth=auth, verify=False)
         if request_res.status_code == 204 or request_res.status_code == 200:
             print(
                 f"[Role Swap] Requested role swap with {preferred_role} (cellId {target_cell_id}, swapId {swap_id})"
             )
+
+            # Monitor the swap request status
+            max_wait_time = 20
+            wait_time = 0
+            position_swap = None
+
+            while wait_time < max_wait_time:
+                time.sleep(1)
+                wait_time += 1
+
+                try:
+                    position_swaps_res = requests.get(check_swap_url, auth=auth, verify=False)
+                    if position_swaps_res.status_code == 204 or position_swaps_res.status_code == 200:
+                        # find a position swap with the swap_id declared above
+                        position_swaps = position_swaps_res.json()
+                        for position_swap in position_swaps:
+                            if position_swap.get("id") == swap_id:
+                                position_swap = position_swap
+                                break
+
+                    else:
+                        print(
+                            f"[Role Swap] Error: {position_swaps_res.status_code}"
+                        )
+
+                    if not position_swap:
+                        print(
+                            f"[Role Swap] Error: No matching ID found for swap_id {swap_id} "
+                        )
+
+                    # Check trade state
+                    position_swap_state = position_swap.get("state")
+                    if position_swap_state == "AVAILABLE":
+                        print(f"[Role Swap] ✅ Accepted!")
+                        return
+                    elif position_swap_state == "INVALID":
+                        print(f"[Role Swap] ❌ Declined")
+                        return
+                    elif position_swap_state == "CANCELLED":
+                        print(f"[Role Swap] ⚠️ State {position_swap_state} not handled")
+                        return
+
+                except Exception:
+                    continue
+
+            print(f"[Role Swap] ⏰ Timeout")
         else:
             print(
                 f"[Role Swap] Role swap error: {request_res.status_code} {request_res.text}"
             )
     except Exception as e:
         print(f"[Role Swap] Exception during swap request: {e}")
-
-    return
