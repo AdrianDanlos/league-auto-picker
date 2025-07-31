@@ -12,7 +12,7 @@ from features.decline_swap_requests import decline_incoming_swap_requests
 from features.swap_role import swap_role
 from features.swap_pick_position import swap_pick_position
 from features.send_message import schedule_champ_select_message
-from utils import get_session
+from utils import get_session, logger
 
 # Disable warnings for self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -47,41 +47,48 @@ auth = requests.auth.HTTPBasicAuth("riot", token)
 
 
 def main():
-    while not get_session(base_url, auth):
-        # Wait for a valid session (champ select)
-        # This blocks until queue is accepted
-        session = wait_for_champ_select(base_url, auth)
-        schedule_champ_select_message(session, base_url, auth)
-        swap_role(session, base_url, auth, config)
+    # Start logging system
+    logger.start_logging()
 
-        # Run concurrently in separate threads
-        pick_ban_thread = threading.Thread(
-            target=pick_and_ban, args=(base_url, auth, config)
-        )
-        swap_position_thread = threading.Thread(
-            target=swap_pick_position, args=(base_url, auth)
-        )
+    try:
+        while not get_session(base_url, auth):
+            # Wait for a valid session (champ select)
+            # This blocks until queue is accepted
+            session = wait_for_champ_select(base_url, auth)
+            schedule_champ_select_message(session, base_url, auth)
+            swap_role(session, base_url, auth, config)
 
-        decline_incoming_swap_requests_thread = threading.Thread(
-            target=decline_incoming_swap_requests, args=(base_url, auth)
-        )
+            # Run concurrently in separate threads
+            pick_ban_thread = threading.Thread(
+                target=pick_and_ban, args=(base_url, auth, config)
+            )
+            swap_position_thread = threading.Thread(
+                target=swap_pick_position, args=(base_url, auth)
+            )
 
-        pick_ban_thread.daemon = True
-        swap_position_thread.daemon = True
-        decline_incoming_swap_requests_thread.daemon = True
+            decline_incoming_swap_requests_thread = threading.Thread(
+                target=decline_incoming_swap_requests, args=(base_url, auth)
+            )
 
-        pick_ban_thread.start()
-        swap_position_thread.start()
-        decline_incoming_swap_requests_thread.start()
+            pick_ban_thread.daemon = True
+            swap_position_thread.daemon = True
+            decline_incoming_swap_requests_thread.daemon = True
 
-        # Wait for threads to complete (they will run until champ select ends)
-        pick_ban_thread.join()
-        swap_position_thread.join()
-        decline_incoming_swap_requests_thread.join()
+            pick_ban_thread.start()
+            swap_position_thread.start()
+            decline_incoming_swap_requests_thread.start()
 
-        print("🟡 Session ended. Stopping pick and ban monitoring.")
+            # Wait for threads to complete (they will run until champ select ends)
+            pick_ban_thread.join()
+            swap_position_thread.join()
+            decline_incoming_swap_requests_thread.join()
 
-        time.sleep(1)
+            print("🟡 Session ended. Stopping pick and ban monitoring.")
+
+            time.sleep(1)
+    finally:
+        # Stop logging system
+        logger.stop_logging()
 
 
 if __name__ == "__main__":

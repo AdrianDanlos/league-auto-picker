@@ -52,3 +52,27 @@ League Auto Picker is an automation utility programm designed to enhance the Lea
    ```
    py .\entrypoint.py
    ```
+
+## Logging System
+
+The application now includes a simple logging system that automatically redirects all console output to a log file. Here's how it works:
+
+### Log Files
+- **Location**: `logs/league_auto_picker.log`
+- **Format**: Timestamped entries with format `[YYYY-MM-DD HH:MM:SS] message`
+- **Content**: All console prints are automatically logged to this file
+
+### Features
+- ✅ **Automatic Logging**: All `print()` statements are automatically logged
+- ✅ **Timestamped Entries**: Each log entry includes a timestamp
+- ✅ **Dual Output**: Logs appear both in console and log file
+- ✅ **Thread-Safe**: Works with multi-threaded operations
+- ✅ **Graceful Cleanup**: Properly closes log files on exit
+
+### Testing the Logging System
+You can test the logging functionality by running:
+```
+py test_logging.py
+```
+
+This will create sample log entries and show you how the system works.

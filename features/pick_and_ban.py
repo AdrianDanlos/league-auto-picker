@@ -60,29 +60,19 @@ def find_best_counter_pick(
         print("🔍 Debug: No enemy champions found")
         return None
 
-    print(
-        f"🔍 Debug: Searching for counters against enemy champions: {enemy_champions}"
-    )
-    print(f"🔍 Debug: Available counter champions: {list(lane_picks_config.keys())}")
-
     best_pick = None
     earliest_position = float("inf")
 
     # Check each enemy champion
     for enemy_champ in enemy_champions:
-        print(f"🔍 Debug: Checking enemy champion: {enemy_champ}")
         # Search through all lane configs to find which champion has this enemy as a counter
         for counter_champ, counter_list in lane_picks_config.items():
             if enemy_champ in counter_list:
                 # Found the enemy champion in this counter list
                 enemy_index = counter_list.index(enemy_champ)
-                print(
-                    f"🔍 Debug: Found {enemy_champ} in {counter_champ}'s counter list at position {enemy_index}"
-                )
 
                 # Check if the counter champion is available
                 counter_id = champion_ids.get(counter_champ)
-                print(f"🔍 Debug: {counter_champ} has ID: {counter_id}")
 
                 # Skip if champion is prepicked by teammate
                 # Add type checking to prevent "unhashable type: 'list'" error
@@ -107,10 +97,6 @@ def find_best_counter_pick(
                     )
                     best_pick = counter_champ
                     earliest_position = enemy_index
-                else:
-                    print(
-                        f"🔍 Debug: {counter_champ} not selected - position {enemy_index} >= {earliest_position} or not available"
-                    )
 
     print(f"🔍 Debug: Final best pick: {best_pick}")
     return best_pick
@@ -239,16 +225,6 @@ def pick_and_ban(base_url, auth, config):
                             lane_picks_config = config["picks"].get(lane_key, {})
                             enemy_champions = get_enemy_champions(session, CHAMPION_IDS)
 
-                            # Try to find best counter-pick based on enemy champions
-                            # Add debugging to help identify the issue
-                            print(f"🔍 Debug: enemy_champions = {enemy_champions}")
-                            print(
-                                f"🔍 Debug: lane_picks_config keys = {list(lane_picks_config.keys())}"
-                            )
-                            print(
-                                f"🔍 Debug: prepicked_champion_ids = {prepicked_champion_ids}"
-                            )
-
                             best_pick = find_best_counter_pick(
                                 enemy_champions,
                                 lane_picks_config,
@@ -258,7 +234,7 @@ def pick_and_ban(base_url, auth, config):
 
                             # If no counter-pick found, use DEFAULT
                             if not best_pick:
-                                print(f"🔍 Debug: No counter pick found = {best_pick}")
+                                print("🔍 Debug: No counter pick found")
                                 mode = (
                                     "RANDOM_MODE"
                                     if config.get("RANDOM_MODE_ACTIVE", False)
@@ -287,9 +263,6 @@ def pick_and_ban(base_url, auth, config):
 
                             if best_pick:
                                 champ_id = CHAMPION_IDS.get(best_pick)
-                                print(
-                                    f"Trying to pick {best_pick} " f"(ID {champ_id})..."
-                                )
                                 res = requests.patch(
                                     f"{base_url}/lol-champ-select/v1/session/actions/"
                                     f"{action['id']}",

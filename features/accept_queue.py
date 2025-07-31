@@ -7,7 +7,7 @@ from utils import get_session
 def accept_queue(base_url, auth):
     """Polls the ready-check endpoint and accepts the match if found."""
     last_state = None
-
+    print("Welcome to League!")
     while True:
         try:
             r = requests.get(
