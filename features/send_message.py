@@ -16,8 +16,8 @@ def send_champ_select_message(session, base_url, auth):
     messages = config.get("messages", [])
     if not messages:
         message = default_message
-
-    message = random.choice(messages)
+    else:
+        message = random.choice(messages)
 
     # Try to get the chatId from session
     chat_id = None
