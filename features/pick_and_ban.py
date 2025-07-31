@@ -107,7 +107,6 @@ def find_best_counter_pick(
                     )
                     best_pick = counter_champ
                     earliest_position = enemy_index
-                    break  # Found the earliest available counter for this enemy
                 else:
                     print(
                         f"🔍 Debug: {counter_champ} not selected - position {enemy_index} >= {earliest_position} or not available"
