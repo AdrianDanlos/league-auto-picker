@@ -43,7 +43,7 @@ def swap_role(session, base_url, auth, config):
         - Searches for teammates with the preferred role
         - Requests position swap if suitable teammate is found
         - Handles API errors gracefully with appropriate logging
-        - Recursively calls itself if no swap ID is found (retry mechanism)
+        - Retries if no swap ID is found
     """
     # Check if session is undefined or None (Someone dodged)
     if not session:
@@ -98,13 +98,12 @@ def swap_role(session, base_url, auth, config):
             swap_id = swap.get("id")
             break
 
-    # FIXME: i think this happens when 2 swaps are requested at the same time? hard to reproduce
     if not swap_id:
         print(f"[Role Swap] No position swap found for cellId {target_cell_id}.")
         print(f"[Role Swap] Available swaps: {position_swaps}")
-        print("🟢 calling again swap_role(session, base_url, auth, config)")
+        print("🟢 Retrying swap_role...")
+        time.sleep(5)
         swap_role(session, base_url, auth, config)
-        return
 
     # Request the swap using the swap ID
     request_swap_url = (
