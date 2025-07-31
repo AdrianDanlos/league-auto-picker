@@ -11,7 +11,7 @@ def send_champ_select_message(session, base_url, auth):
         config = json.load(f)
 
     current_day = datetime.datetime.now().strftime("%A")
-    default_message = f"Hi, happy {current_day}!"
+    default_message = f"hey happy {current_day.lower()}"
 
     messages = config.get("messages", [])
     if not messages:
