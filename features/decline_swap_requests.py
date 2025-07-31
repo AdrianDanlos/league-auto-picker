@@ -107,3 +107,4 @@ def decline_incoming_swap_requests(base_url, auth):
             print(
                 f"[Swap Decline] Exception while handling incoming swap requests: {e}"
             )
+            return
