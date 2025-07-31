@@ -259,8 +259,13 @@ def pick_and_ban(base_url, auth, config):
                             # If no counter-pick found, use DEFAULT
                             if not best_pick:
                                 print(f"🔍 Debug: No counter pick found = {best_pick}")
+                                mode = (
+                                    "RANDOM_MODE"
+                                    if config.get("RANDOM_MODE_ACTIVE", False)
+                                    else "DEFAULT"
+                                )
                                 default_picks = (
-                                    config["picks"].get("DEFAULT", {}).get(lane_key, [])
+                                    config["picks"].get(mode, {}).get(lane_key, [])
                                 )
                                 if default_picks:
                                     # Filter available default picks (not prepicked by teammates)
