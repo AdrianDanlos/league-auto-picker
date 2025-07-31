@@ -230,6 +230,11 @@ def pick_and_ban(base_url, auth, config):
                                     )
 
                         elif action["type"] == "pick":
+                            print(
+                                "⏰ It's time to pick! Waiting 10 seconds before making selection..."
+                            )
+                            time.sleep(10)
+
                             # New pick logic
                             lane_picks_config = config["picks"].get(lane_key, {})
                             enemy_champions = get_enemy_champions(session, CHAMPION_IDS)

@@ -2,6 +2,7 @@ import requests
 import random
 import json
 import threading
+import datetime
 
 
 def send_champ_select_message(session, base_url, auth):
@@ -9,10 +10,12 @@ def send_champ_select_message(session, base_url, auth):
     with open("config.json", "r") as f:
         config = json.load(f)
 
+    current_day = datetime.datetime.now().strftime("%A")
+    default_message = f"Hi, happy {current_day}!"
+
     messages = config.get("messages", [])
     if not messages:
-        print("[Chat] No messages found in config file")
-        return
+        message = default_message
 
     message = random.choice(messages)
 
@@ -37,7 +40,7 @@ def send_champ_select_message(session, base_url, auth):
         print(session)
 
 
-def schedule_champ_select_message(session, base_url, auth, delay=15):
+def schedule_champ_select_message(session, base_url, auth, delay=20):
     """
     Schedule the champ select message to be sent after a delay without blocking the main thread.
 
@@ -45,7 +48,7 @@ def schedule_champ_select_message(session, base_url, auth, delay=15):
         session: The session object
         base_url: The base URL for the API
         auth: Authentication credentials
-        delay: Delay in seconds before sending the message (default: 15)
+        delay: Delay in seconds before sending the message (default: 20)
     """
     timer = threading.Timer(
         delay, send_champ_select_message, args=(session, base_url, auth)
