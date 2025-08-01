@@ -1,4 +1,5 @@
 import requests
+from urllib.parse import quote
 
 webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoymtnU4o9br3grXkV4HJIl2WYtTAY6BQ2__D5MyAbZqpv-FsW3lEKjPcAN2"
 
@@ -7,6 +8,9 @@ def send_discord_message(base_url, auth, game_data):
     try:
         gameflow_phase = get_gameflow_phase(base_url, auth)
         if gameflow_phase == "InProgress":
+            summoner_name = quote(game_data.get("summoner_name"))
+            porofessor_url = build_porofessor_url(game_data.get("region"), summoner_name)
+            opgg_url = build_opgg_url(game_data.get("region"), summoner_name)
 
             styled_content = (
                 f"```ansi\n"
@@ -15,8 +19,8 @@ def send_discord_message(base_url, auth, game_data):
                 f"👤 **Player:** `{game_data.get('summoner_name', 'Player')}`\n"
                 f"⚔️ **Champion:** `{game_data.get('picked_champion', 'None')}`\n"
                 f"🛡️ **Role:** `{game_data.get('assigned_lane', 'Unknown')}`\n\n"
-                f"🌍 **Porofessor:** <https://porofessor.gg/live/{game_data.get('region')}/{game_data.get('summoner_name')}>\n"
-                f"🌍 **OPGG:** <https://op.gg/lol/summoners/{game_data.get('region')}/{game_data.get('summoner_name')}/ingame>\n"
+                f"🌍 **Porofessor:** <{porofessor_url}>\n"
+                f"🌍 **OPGG:** <{opgg_url}>\n\n\n"
             )
 
             data = {"content": styled_content}
@@ -52,5 +56,9 @@ def get_gameflow_phase(base_url, auth):
         print(f"❌ Unexpected error: {e}")
 
 
-def create_discord_message(picked_champion):
-    return f"🎯 Final picked champion: {picked_champion}"
+def build_porofessor_url(region, summoner_name):
+    return f"https://porofessor.gg/live/{region}/{summoner_name}"
+
+
+def build_opgg_url(region, summoner_name):
+    return f"https://op.gg/lol/summoners/{region}/{summoner_name}/ingame"
