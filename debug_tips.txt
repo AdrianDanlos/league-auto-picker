@@ -1,0 +1,5 @@
+1. In case we don't know what the data structure looks like output the whole session
+
+2. Traceback
+import traceback
+print(f"⚠️ Full traceback: {traceback.format_exc()}")
