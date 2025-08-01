@@ -2,7 +2,10 @@ import requests
 import time
 import random
 
-from features import select_default_runes
+from features.select_default_runes_and_summs import (
+    select_default_runes,
+    select_summoner_spells,
+)
 from utils import get_session
 
 
@@ -171,7 +174,7 @@ def pick_and_ban(base_url, auth, config):
             * Is not picked by enemies
         - Prioritizes counter-picks based on their position in enemy counter lists
         - Falls back to default picks if no counter-pick is available
-    4. **Random Mode**: If RANDOM_MODE_ACTIVE is enabled, randomly selects from available default picks
+    4. **Random Mode**: If random_mode_active is enabled, randomly selects from available default picks
     5. **Execution**: Attempts to pick the selected champion via API call
 
     **Ban Logic:**
@@ -195,10 +198,10 @@ def pick_and_ban(base_url, auth, config):
             - picks (dict): Lane-specific pick configurations
                 - LANE (str): Dictionary mapping champion names to counter lists
                 - DEFAULT (dict): Default pick lists per lane
-                - RANDOM_MODE (dict): Random pick lists per lane (if RANDOM_MODE_ACTIVE is True)
+                - RANDOM_MODE (dict): Random pick lists per lane (if random_mode_active is True)
             - bans (dict): Lane-specific ban preferences
                 - LANE (str): Champion name to ban for each lane
-            - RANDOM_MODE_ACTIVE (bool, optional): Whether to use random selection for default picks
+            - random_mode_active (bool, optional): Whether to use random selection for default picks
 
     Returns:
         None: This function runs indefinitely until interrupted or session ends
@@ -323,7 +326,7 @@ def pick_and_ban(base_url, auth, config):
                                 print("🔍 Debug: No counter pick found")
                                 mode = (
                                     "RANDOM_MODE"
-                                    if config.get("RANDOM_MODE_ACTIVE", False)
+                                    if config.get("random_mode_active", False)
                                     else "DEFAULT"
                                 )
                                 default_picks = (
@@ -362,6 +365,7 @@ def pick_and_ban(base_url, auth, config):
                                 if res.status_code == 204:
                                     print(f"✅ Picked {best_pick}!")
                                     select_default_runes(base_url, auth)
+                                    select_summoner_spells(base_url, auth, config, best_pick, assigned_lane)
                                     break
                                 else:
                                     print(
