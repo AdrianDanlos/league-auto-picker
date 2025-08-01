@@ -4,13 +4,13 @@ webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoym
 
 # Mensaje que quieres enviar
 mensaje = (
-    f"```ansi\n"
-    f"\u001b[1;32m🎮 ═══ GAME STARTED ═══ 🎮\u001b[0m\n"
-    f"```\n"
-    f"👤 **Player:** `N3 Machine`\n"
-    f"⚔️ **Champion:** `Kled`\n"
-    f"🛡️ **Role:** `Top Lane`\n\n"
-    f"🏆 **Good luck and have fun!** 🏆\n"
+    "```ansi\n"
+    "\u001b[1;32m🎮 ═══ GAME STARTED ═══ 🎮\u001b[0m\n"
+    "```\n"
+    "👤 **Player:** `N3 Machine`\n"
+    "⚔️ **Champion:** `Kled`\n"
+    "🛡️ **Role:** `Top Lane`\n\n"
+    "🏆 **Good luck and have fun!** 🏆\n"
     "🌍 **Porofessor:** <https://porofessor.gg/live/euw/n3%20essential-0000>"
 )
 
