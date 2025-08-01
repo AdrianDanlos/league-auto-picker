@@ -39,7 +39,6 @@
         "Annie",
         "Yone",
         "Malzahar",
-        "Lux",
         "Leblanc",
         "Azir",
         "Fizz",
@@ -52,41 +51,30 @@
         "Hwei",
         "Qiyana",
         "Vex",
-        "Veigar"
+        "Veigar",
+        "Kassadin"
       ],
       "Aurelion Sol": [
-        "Smolder",
         "Orianna",
         "Mel",
-        "Irelia",
         "Yasuo",
         "Taliyah",
         "Sylas",
         "Syndra",
         "Viktor",
         "Hwei",
-        "Lissandra"
+        "Anivia"
       ],
-      "Ahri": [
-        "Smolder",
-        "Aurelion Sol",
-        "Galio",
-        "Hwei",
-        "Yone",
-        "Ziggs",
-        "Azir"
-      ],
+      "Ahri": ["Galio", "Aurelion Sol", "Hwei", "Yone", "Ziggs", "Azir"],
       "Kassadin": [
         "Taliyah",
-        "Kayle",
+        "Fizz",
         "Mel",
         "Viktor",
         "Leblanc",
         "Hwei",
-        "Talon",
         "Aurelion Sol",
         "Katarina",
-        "Irelia",
         "Zoe",
         "Annie",
         "Anivia"
@@ -96,27 +84,21 @@
         "Mel",
         "Hwei",
         "Xerath",
-        "Lux",
-        "Malzahar",
-        "Smolder",
         "Syndra",
+        "Malzahar",
         "Azir",
         "Taliyah",
-        "Qiyana",
-        "Irelia",
         "Yone",
         "Katarina",
         "Ziggs"
       ],
       "Galio": [
         "Ryze",
-        "Jayce",
         "Viktor",
         "Diana",
         "Sylas",
         "Akali",
         "Kassadin",
-        "Ekko",
         "Vladimir",
         "Fizz",
         "Aurelion Sol",
@@ -127,22 +109,19 @@
       ],
       "Lissandra": [
         "Yasuo",
-        "Smolder",
         "Katarina",
         "Fizz",
         "Ryze",
         "Yone",
         "Aurora",
         "Malzahar",
-        "Vex",
         "Akali",
         "Azir",
-        "Lux",
         "Veigar",
-        "Taliyah",
-        "Talon"
+        "Taliyah"
       ],
       "Orianna": [
+        "Lissandra",
         "Corki",
         "Yone",
         "Vladimir",
@@ -151,9 +130,21 @@
         "Kassadin",
         "Twisted Fate"
       ],
-      "Viktor": ["Smolder", "Mel", "Azir", "Ryze", "Ziggs"],
-      "Malphite": ["Talon", "Zed", "Smolder", "Mel", "Azir", "Ryze", "Ziggs"],
-      "Ziggs": ["Cassiopeia", "Lux", "Smolder"]
+      "Viktor": ["Mel", "Azir", "Veigar"],
+      "Malphite": [
+        "Twisted Fate",
+        "Zed",
+        "Taliyah",
+        "Mel",
+        "Azir",
+        "Ryze",
+        "Ziggs"
+      ],
+      "Ziggs": ["Cassiopeia"],
+      "Aurora": ["Sylas"],
+      "Swain": ["Galio"],
+      "Annie": ["Yone", "Vex"],
+      "Malzahar": ["Zoe"]
     },
     "UTILITY": {
       "Leona": [
@@ -182,22 +173,61 @@
     "DEFAULT": {
       "TOP": ["Malphite", "Sion", "Cho'Gath"],
       "JUNGLE": ["Diana"],
-      "MIDDLE": ["Diana", "Galio", "Fizz"],
+      "MIDDLE": ["Diana", "Aurelion Sol", "Ahri"],
+      "BOTTOM": ["Ziggs"],
+      "UTILITY": ["Leona", "Blitzcrank"]
+    },
+    "RANDOM_MODE": {
+      "TOP": ["Malphite", "Sion", "Cho'Gath"],
+      "JUNGLE": ["Diana"],
+      "MIDDLE": [
+        "Diana",
+        "Aurelion Sol",
+        "Ahri",
+        "Kassadin",
+        "Galio",
+        "Orianna",
+        "Fizz",
+        "Viktor",
+        "Swain"
+      ],
       "BOTTOM": ["Ziggs"],
       "UTILITY": ["Leona", "Blitzcrank"]
     }
   },
+  "summs": {
+    "TOP": {
+      "Default": {
+        "spell1Id": 4, 
+        "spell2Id": 12 
+      }
+    },
+    "JUNGLE": {
+      "Default": {
+        "spell1Id": 4, 
+        "spell2Id": 11 
+      }
+    },
+    "MIDDLE": {
+      "Diana": {
+        "spell1Id": 4, 
+        "spell2Id": 14 
+      },
+      "Fizz": {
+        "spell1Id": 4, 
+        "spell2Id": 14 
+      },
+      "Annie": {
+        "spell1Id": 4, 
+        "spell2Id": 14 
+      },
+      "Default": {
+        "spell1Id": 4, 
+        "spell2Id": 12 
+      }
+    }
+  },
+  "random_mode_active": true,
   "preferred_role": "middle",
-  "messages": [
-    "yo team let's run it up - we bout to diff these kids",
-    "sup team, time to gap them - this one's free",
-    "waddup squad, let's farm some LP real quick",
-    "ay team we finna smash these plebs no cap",
-    "yooo let's get this dub, bout to be ez clap",
-    "what's good team, time to int their mental fr",
-    "lesgooo team we bout to turbo stomp - free win",
-    "ay team let's cook these bots, gonna be a banger",
-    "yoo squad time to gap check - they're not ready",
-    "sup team we finna hard carry this lobby ngl"
-  ]
+  "messages": []
 }
