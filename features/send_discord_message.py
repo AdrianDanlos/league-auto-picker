@@ -15,8 +15,8 @@ def send_discord_message(base_url, auth, game_data):
                 f"👤 **Player:** `{game_data.get('summoner_name', 'Player')}`\n"
                 f"⚔️ **Champion:** `{game_data.get('picked_champion', 'None')}`\n"
                 f"🛡️ **Role:** `{game_data.get('assigned_lane', 'Unknown')}`\n\n"
-                f"🌍 **Porofessor:** `<https://porofessor.gg/live/{game_data.get('region')}/{game_data.get('summoner_name')}>`\n"
-                f"🌍 **OPGG:** `<https://op.gg/lol/summoners/{game_data.get('region')}/{game_data.get('summoner_name')}/ingame>`\n"
+                f"🌍 **Porofessor:** <https://porofessor.gg/live/{game_data.get('region')}/{game_data.get('summoner_name')}>\n"
+                f"🌍 **OPGG:** <https://op.gg/lol/summoners/{game_data.get('region')}/{game_data.get('summoner_name')}/ingame>\n"
             )
 
             data = {"content": styled_content}

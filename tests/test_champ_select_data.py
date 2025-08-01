@@ -35,6 +35,18 @@ def test_rune_page_reset():
                 f"{base_url}/lol-champ-select/v1/session", auth=auth, verify=False
             )
             print(f"🔍 Session: {r.json()}")
+
+            def get_region(session):
+                region = session["chatDetails"].get("targetRegion")
+                print(f"🔍 Debug: Region: {region}")
+                if region == "eu1":
+                    return "euw"
+                if region == "sa1":
+                    return "sea"
+                # For now, we only support euw and sea
+                return "unknown_region"
+
+            print(get_region(r.json()))
         except Exception as e:
             print(f"❌ Error getting current rune page: {e}")
 
