@@ -6,12 +6,13 @@ import psutil
 import re
 import threading
 
+from features.send_discord_message import send_discord_message
 from features.accept_queue import accept_queue
-from features.pick_and_ban import pick_and_ban
+from features.pick_and_ban import pick_and_ban, game_data
 from features.decline_swap_requests import decline_incoming_swap_requests
 from features.swap_role import swap_role
 from features.swap_pick_position import swap_pick_position
-from features.send_message import schedule_champ_select_message
+from features.send_chat_message import schedule_champ_select_message
 from utils import get_session, logger
 
 # Disable warnings for self-signed certs
@@ -83,6 +84,7 @@ def main():
             swap_position_thread.join()
             decline_incoming_swap_requests_thread.join()
 
+            send_discord_message(base_url, auth, game_data)
             print("🟡 Session ended. Stopping pick and ban monitoring.")
 
             time.sleep(1)

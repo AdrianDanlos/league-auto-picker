@@ -36,7 +36,7 @@ def select_summoner_spells(base_url, auth, config, champion, assigned_lane):
         )
 
         if response.status_code == 200 or response.status_code == 204:
-            print("✅ Successfully set the summoner spells")
+            print(f"✅ Successfully set the summoner spells:{champion_summs}")
         else:
             print(
                 f"❌ Failed to set the summoner spells (Status: {response.status_code})"

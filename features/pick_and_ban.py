@@ -8,6 +8,13 @@ from features.select_default_runes_and_summs import (
 )
 from utils import get_session
 
+# Global variable to store the data for discord's message
+game_data = {
+    "picked_champion": None,
+    "summoner_name": None,
+    "assigned_lane": None,
+}
+
 
 # === Champion name -> ID map (fetched dynamically from Data Dragon) ===
 def fetch_champion_ids():
@@ -150,6 +157,41 @@ def find_best_counter_pick(
 
     print(f"🔍 Debug: Final best pick: {best_pick}")
     return best_pick
+
+
+def get_region(session):
+    region = session["chatDetails"].get("targetRegion")
+    if region == "eu1":
+        return "euw"
+    if region == "sa1":
+        return "sea"
+    # For now, we only support euw and sea
+    return "unknown_region"
+
+
+def create_discord_message(best_pick, session):
+    # Make the variable accesible to the entrypoint
+    global game_data
+    game_data["picked_champion"] = best_pick
+    game_data["summoner_name"] = get_summoner_name(session)
+    game_data["assigned_lane"] = get_assigned_lane(session)
+    game_data["region"] = get_region(session)
+
+
+def get_summoner_name(session):
+    local_player_cell_id = session.get("localPlayerCellId")
+
+    # Find your player info in myTeam
+    for player in session.get("myTeam", []):
+        if player["cellId"] == local_player_cell_id:
+            game_name = player.get("gameName", "")
+            tag_line = player.get("tagLine", "")
+
+            if game_name and tag_line:
+                # FIXME: This is porofessor and opgg format. If we intend to reuse this function we should be careful not to break the link
+                return f"{game_name}-{tag_line}"
+            elif game_name:
+                return game_name
 
 
 def pick_and_ban(base_url, auth, config):
@@ -364,8 +406,11 @@ def pick_and_ban(base_url, auth, config):
                                 )
                                 if res.status_code == 204:
                                     print(f"✅ Picked {best_pick}!")
+                                    create_discord_message(best_pick, session)
                                     select_default_runes(base_url, auth)
-                                    select_summoner_spells(base_url, auth, config, best_pick, assigned_lane)
+                                    select_summoner_spells(
+                                        base_url, auth, config, best_pick, assigned_lane
+                                    )
                                     break
                                 else:
                                     print(

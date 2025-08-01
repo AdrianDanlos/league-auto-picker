@@ -3,6 +3,7 @@ import urllib3
 import psutil
 import re
 
+
 # Disable warnings for self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -27,6 +28,15 @@ def test_rune_page_reset():
         auth = requests.auth.HTTPBasicAuth("riot", token)
 
         print(f"🔗 Connected to LCU API at {base_url}")
+
+        # Get session
+        try:
+            r = requests.get(
+                f"{base_url}/lol-champ-select/v1/session", auth=auth, verify=False
+            )
+            print(f"🔍 Session: {r.json()}")
+        except Exception as e:
+            print(f"❌ Error getting current rune page: {e}")
 
         # Get current rune page
         try:
