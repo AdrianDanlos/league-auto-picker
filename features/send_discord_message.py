@@ -9,8 +9,10 @@ def send_discord_message(base_url, auth, game_data):
         gameflow_phase = get_gameflow_phase(base_url, auth)
         if gameflow_phase == "InProgress":
             summoner_name = quote(game_data.get("summoner_name"))
-            porofessor_url = build_porofessor_url(game_data.get("region"), summoner_name)
-            opgg_url = build_opgg_url(game_data.get("region"), summoner_name)
+            region = game_data.get("region")
+
+            porofessor_url = build_porofessor_url(region, summoner_name)
+            opgg_url = build_opgg_url(region, summoner_name)
 
             styled_content = (
                 f"```ansi\n"
@@ -57,8 +59,19 @@ def get_gameflow_phase(base_url, auth):
 
 
 def build_porofessor_url(region, summoner_name):
-    return f"https://porofessor.gg/live/{region}/{summoner_name}"
+    region_converted = region
+    if region == "eu1":
+        region_converted = "euw"
+    if region == "sa1":
+        region_converted = "sg"
+
+    return f"https://porofessor.gg/live/{region_converted}/{summoner_name}"
 
 
 def build_opgg_url(region, summoner_name):
-    return f"https://op.gg/lol/summoners/{region}/{summoner_name}/ingame"
+    region_converted = region
+    if region == "eu1":
+        region_converted = "euw"
+    if region == "sa1":
+        region_converted = "sea"
+    return f"https://op.gg/lol/summoners/{region_converted}/{summoner_name}/ingame"

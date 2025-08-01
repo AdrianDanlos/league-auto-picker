@@ -160,14 +160,7 @@ def find_best_counter_pick(
 
 
 def get_region(session):
-    region = session["chatDetails"]["mucJwtDto"].get("targetRegion")
-    print(f"🔍 Debug: Region: {region}")
-    if region == "eu1":
-        return "euw"
-    if region == "sa1":
-        return "sea"
-    # For now, we only support euw and sea
-    return "unknown_region"
+    return session["chatDetails"]["mucJwtDto"].get("targetRegion")
 
 
 def create_discord_message(best_pick, session):
