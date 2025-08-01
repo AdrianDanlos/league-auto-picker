@@ -1,5 +1,4 @@
 __pycache__/
-# To listen to local changes again undo git update-index --skip-worktree config.json
 config.json
 cmd_launcher.exe.lnk
 logs/
