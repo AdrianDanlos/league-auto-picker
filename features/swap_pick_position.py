@@ -71,7 +71,7 @@ def swap_pick_position(base_url, auth):
             # Check if session is None (someone dodged)
             if session is None:
                 print(
-                    "[Pick Swap] Session is None - someone may have dodged. Exiting..."
+                    "[Pick Swap] Session is None - someone may have dodged or game just started. Exiting..."
                 )
                 return
         except Exception as e:

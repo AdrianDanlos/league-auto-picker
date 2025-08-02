@@ -372,18 +372,13 @@ def pick_and_ban(base_url, auth, config):
                             timeLeftToPickMilis = session.get("timer", {}).get(
                                 "adjustedTimeLeftInPhase", 0
                             )
-                            print(
-                                f"🔍 Debug: Time left to pick: {timeLeftToPickMilis}ms"
-                            )
 
                             # Calculate sleep time, ensuring it's not negative
                             sleep_time = max(0, (timeLeftToPickMilis - 5000) / 1000)
-                            print(f"🔍 Debug: Sleeping for {sleep_time} seconds")
 
                             # Pick when there is 5 seconds left (5000ms)
                             if sleep_time > 0:
                                 time.sleep(sleep_time)
-                                print("Sleep Over")
 
                             # Check if already locked in before waiting
                             if is_champion_locked_in(base_url, auth):
