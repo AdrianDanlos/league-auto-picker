@@ -108,8 +108,7 @@ def swap_role(session, base_url, auth, config):
         log_and_discord(
             f"[Role Swap] No position swap found for cellId {target_cell_id}. Available swaps: {position_swaps}"
         )
-        time.sleep(5)
-        swap_role(session, base_url, auth, config)
+        return
 
     # Request the swap using the swap ID
     request_swap_url = (

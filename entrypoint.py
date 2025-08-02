@@ -26,7 +26,9 @@ def wait_for_champ_select(base_url, auth):
     """Synchronous version - blocks until champ select starts"""
     while True:
         accept_queue(base_url, auth)
-        # After accept_queue returns, get the champ select session once
+        # After accept_queue returns, get the champ select session
+        # Wait 3 seconds before getting the session to let everything load
+        time.sleep(3)
         session = get_session(base_url, auth)
         return session
 
