@@ -128,15 +128,26 @@ def find_best_counter_pick(
         log_and_discord("🔍 Debug: No enemy champions found")
         return None
 
+    print(
+        f"🔍 Debug: Starting counter-pick search with {len(enemy_champions)} enemy champions"
+    )
+    print(f"🔍 Debug: Lane picks config keys: {list(lane_picks_config.keys())}")
+
     best_pick = None
     earliest_position = float("inf")
 
     # Check each enemy champion
     for enemy_champ in enemy_champions:
+        print(f"🔍 Debug: Checking enemy champion: {enemy_champ}")
         # Search through all lane configs to find which champion has this enemy as a counter
         try:
+            found_counter = False
             for counter_champ, counter_list in lane_picks_config.items():
                 if enemy_champ in counter_list:
+                    found_counter = True
+                    print(
+                        f"🔍 Debug: Found {enemy_champ} in counter list for {counter_champ}"
+                    )
                     # Found the enemy champion in this counter list
                     enemy_index = counter_list.index(enemy_champ)
 
@@ -165,6 +176,10 @@ def find_best_counter_pick(
                             f"⚠️ Error in is_champion_available for {counter_champ}: {e}"
                         )
                         continue
+
+            if not found_counter:
+                print(f"🔍 Debug: No counter found for enemy champion: {enemy_champ}")
+
         except Exception as e:
             log_and_discord(
                 f"⚠️ Error in counter-pick iteration: {e}\n ⚠️ Lane picks config: {lane_picks_config}"
@@ -356,13 +371,17 @@ def pick_and_ban(base_url, auth, config):
                             timeLeftToPickMilis = session.get("timer", {}).get(
                                 "adjustedTimeLeftInPhase", ""
                             )
-
+                            print(f"🔍 Debug: Time left to pick: {timeLeftToPickMilis}")
+                            print(
+                                f"timeLeftToPickMilis - 5000) / 1000: {(timeLeftToPickMilis - 5000) / 1000}"
+                            )
                             # Pick when there is 1 second left
-                            time.sleep((timeLeftToPickMilis - 1000) / 1000)
+                            time.sleep((timeLeftToPickMilis - 5000) / 1000)
+                            print("Sleep Over")
 
                             if is_champion_locked_in(base_url, auth):
                                 CHAMPION_NAMES = fetch_champion_names()
-                                locked_in_champion_id = get_locked_in_champion()
+                                locked_in_champion_id = get_locked_in_champion(base_url, auth)
                                 champion_name = CHAMPION_NAMES.get(
                                     locked_in_champion_id
                                 )
@@ -381,13 +400,13 @@ def pick_and_ban(base_url, auth, config):
 
                                 banned_champions_ids = get_banned_champion_ids(session)
 
-                                # print(f"🔍 Debug: Enemy champions: {enemy_champions}")
-                                # print(
-                                #     f"🔍 Debug: Banned champions: {banned_champions_ids}"
-                                # )
-                                # print(
-                                #     f"🔍 Debug: ally_champion_ids: {ally_champion_ids}"
-                                # )
+                                print(f"🔍 Debug: Enemy champions: {enemy_champions}")
+                                print(
+                                    f"🔍 Debug: Banned champions: {banned_champions_ids}"
+                                )
+                                print(
+                                    f"🔍 Debug: ally_champion_ids: {ally_champion_ids}"
+                                )
 
                                 best_pick = find_best_counter_pick(
                                     enemy_champions,
