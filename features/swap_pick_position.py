@@ -197,17 +197,13 @@ def swap_pick_position(base_url, auth):
                     and "INVALID" not in res.text
                     and "DECLINED" not in res.text
                 ):
-                    # print(
-                    #     f"[Pick Swap] Requested swap with {assigned_position} at pick order {pick_order} (cellId {cell_id}, swapId {swap_id})"
-                    # )
-                    # Wait a bit after successful request to let it process
-                    time.sleep(3)
+                    pass
                 else:
                     # If someone declines, further requests will end up here
-                    # print(
-                    #     f"[Pick Swap] Failed to request swap: {res.status_code} {res.text}"
-                    # )
                     attempted_cell_ids.add(cell_id)
+
+                # Wait a bit after each request
+                time.sleep(5)
             except Exception as e:
                 log_and_discord(
                     f"[Pick Swap] Exception during swap request for cellId {cell_id}: {e}"
