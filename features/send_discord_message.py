@@ -8,6 +8,9 @@ webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoym
 
 def send_discord_message(base_url, auth, game_data):
     try:
+        tier, division, wins, loses = get_rank_data(
+            base_url, auth, game_data.get("queueType")
+        ).values()
         gameflow_phase = get_gameflow_phase(base_url, auth)
         if gameflow_phase == "InProgress":
             summoner_name = quote(game_data.get("summoner_name"))
@@ -18,11 +21,14 @@ def send_discord_message(base_url, auth, game_data):
 
             styled_content = (
                 f"```ansi\n"
+                f"\n\n"
                 f"\u001b[1;32m🎮 ═══ GAME STARTED ═══ 🎮\u001b[0m\n"
                 f"```\n"
                 f"👤 **Player:** `{game_data.get('summoner_name', 'Player')}`\n"
                 f"⚔️ **Champion:** `{game_data.get('picked_champion', 'None')}`\n"
-                f"🛡️ **Role:** `{game_data.get('assigned_lane', 'Unknown')}`\n\n"
+                f"🛡️ **Role:** `{game_data.get('assigned_lane', 'Unknown')}`\n"
+                f"🏆 **Queue:** {game_data.get('queueType')}\n"
+                f"📊 **Rank:** {tier} {division} | **Wins:** {wins} | **Losses:** {loses}\n\n"
                 f"🌍 **Porofessor:** <{porofessor_url}>\n"
                 f"🌍 **OPGG:** <{opgg_url}>\n\n\n"
             )
@@ -79,3 +85,29 @@ def build_opgg_url(region, summoner_name):
     if region == "sa1":
         region_converted = "sea"
     return f"https://op.gg/lol/summoners/{region_converted}/{summoner_name}/ingame"
+
+
+def get_rank_data(base_url, auth, queueType):
+    try:
+        response = requests.get(
+            f"{base_url}/lol-ranked/v1/current-ranked-stats",
+            auth=auth,
+            verify=False,
+        )
+
+        if response.status_code == 200 or response.status_code == 204:
+            player_data = response.json()
+            ranked_data = player_data["queueMap"][queueType]
+            return {
+                "tier": ranked_data.get("tier"),
+                "division": ranked_data.get("division"),
+                "wins": ranked_data.get("wins"),
+                "loses": ranked_data.get("losses"),
+            }
+        else:
+            log_and_discord(
+                f"❌ Failed to get rank data {response.status_code}, {response.text}"
+            )
+
+    except Exception as e:
+        log_and_discord(f"❌ Unexpected error: {e}")

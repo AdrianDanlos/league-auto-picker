@@ -2,6 +2,7 @@ import requests
 import time
 import random
 
+from constants import FLEX_CODE, INSTA_PICK_TIME_MILIS, SOLOQ_CODE
 from features.select_default_runes_and_summs import (
     select_default_runes,
     select_summoner_spells,
@@ -173,6 +174,15 @@ def create_discord_message(best_pick, session):
     game_data["summoner_name"] = get_summoner_name(session)
     game_data["assigned_lane"] = get_assigned_lane(session)
     game_data["region"] = get_region(session)
+    game_data["queueType"] = get_queueType(session)
+
+
+def get_queueType(session):
+    queue_type = session.get("queueId", 0)
+    if queue_type == SOLOQ_CODE:
+        return "RANKED_SOLO_5x5"
+    elif queue_type == FLEX_CODE:
+        return "RANKED_FLEX_SR"
 
 
 def pick_and_ban(base_url, auth, config):
@@ -313,7 +323,6 @@ def pick_and_ban(base_url, auth, config):
                             )
 
                             pick_time = False
-                            target_time_in_milis = 5000
                             while not pick_time:
                                 time.sleep(1)
                                 session = get_session(base_url, auth)
@@ -321,7 +330,7 @@ def pick_and_ban(base_url, auth, config):
                                     session.get("timer", {}).get(
                                         "adjustedTimeLeftInPhase", ""
                                     )
-                                    < target_time_in_milis
+                                    < INSTA_PICK_TIME_MILIS
                                 ):
                                     pick_time = True
 
