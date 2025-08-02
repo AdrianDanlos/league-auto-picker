@@ -1,9 +1,6 @@
 import time
-import requests
 import json
 import urllib3
-import psutil
-import re
 import threading
 
 from features.send_discord_message import send_discord_message
@@ -13,7 +10,8 @@ from features.decline_swap_requests import decline_incoming_swap_requests
 from features.swap_role import swap_role
 from features.swap_pick_position import swap_pick_position
 from features.send_chat_message import schedule_champ_select_message
-from utils import get_session
+from lcu_connection import auth, base_url
+from lcu_connection import get_session
 from features.logger import logger
 
 # Disable warnings for self-signed certs
@@ -24,16 +22,6 @@ with open("config.json") as f:
     config = json.load(f)
 
 
-def get_lcu_credentials():
-    for proc in psutil.process_iter(["cmdline"]):
-        if proc.info["cmdline"] and "LeagueClientUx.exe" in proc.info["cmdline"][0]:
-            cmdline = " ".join(proc.info["cmdline"])
-            port = re.search(r"--app-port=(\d+)", cmdline).group(1)
-            token = re.search(r"--remoting-auth-token=([\w-]+)", cmdline).group(1)
-            return port, token
-    raise RuntimeError("League client not found.")
-
-
 def wait_for_champ_select(base_url, auth):
     """Synchronous version - blocks until champ select starts"""
     while True:
@@ -41,11 +29,6 @@ def wait_for_champ_select(base_url, auth):
         # After accept_queue returns, get the champ select session once
         session = get_session(base_url, auth)
         return session
-
-
-port, token = get_lcu_credentials()
-base_url = f"https://127.0.0.1:{port}"
-auth = requests.auth.HTTPBasicAuth("riot", token)
 
 
 def main():

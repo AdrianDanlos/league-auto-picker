@@ -7,7 +7,8 @@ from features.select_default_runes_and_summs import (
     select_summoner_spells,
 )
 from features.send_discord_error_message import log_and_discord
-from utils import get_session, get_summoner_name
+from lcu_connection import get_session
+from utils import get_summoner_name
 
 # Global variable to store the data for discord's message
 game_data = {
@@ -327,6 +328,9 @@ def pick_and_ban(base_url, auth, config):
                             if game_data["picked_champion"]:
                                 print(
                                     "We have already picked a champion, skipping pick and ban"
+                                )
+                                create_discord_message(
+                                    game_data["picked_champion"], session
                                 )
                                 return
 

@@ -1,7 +1,7 @@
 import requests
 import time
 from features.send_discord_error_message import log_and_discord
-from utils import get_session
+from lcu_connection import get_session
 
 
 def get_pick_order(session, cell_id):

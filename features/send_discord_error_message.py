@@ -1,13 +1,14 @@
 import requests
 
-from utils import get_session, get_summoner_name
+from lcu_connection import auth, base_url, get_session
+from utils import get_summoner_name
 
 webhook_url = "https://discord.com/api/webhooks/1401132002693873674/2QGQjoLaeESr4QhK6qMt3ortI5ChkZIIfp3L3uznlgBDI96C1IBAmVWkklVc8LeyoJ-v"
 
 
 def send_discord_error_message(error):
     try:
-        session = get_session()
+        session = get_session(base_url, auth)
         summoner_name = get_summoner_name(session)
         data = {"content": f"{summoner_name}: {error}"}
 
