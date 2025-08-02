@@ -19,7 +19,7 @@ def select_default_runes(base_url, auth):
             )
 
     except Exception as e:
-        log_and_discord(f"❌ Unexpected error: {e}")
+        log_and_discord(f"❌ Unexpected error setting default runes and summs: {e}")
 
 
 def select_summoner_spells(base_url, auth, config, champion, assigned_lane):
@@ -43,4 +43,4 @@ def select_summoner_spells(base_url, auth, config, champion, assigned_lane):
             )
 
     except Exception as e:
-        log_and_discord(f"❌ Unexpected error: {e}")
+        log_and_discord(f"❌ Unexpected error setting default runes and summs: {e}")

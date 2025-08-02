@@ -29,12 +29,41 @@ def test_player_data():
 
         print(f"🔗 Connected to LCU API at {base_url}")
 
+        # Get final stats after game
+        try:
+            r = requests.get(
+                f"{base_url}/lol-end-of-game/v1/eog-stats-block",
+                auth=auth,
+                verify=False,
+            )
+            print(f"🔍 stats: {r.json()}")
+            print("------------------------------------------------")
+
+        except Exception as e:
+            print(f"❌ Error getting stats: {e}")
+
+        # Get final stats after game v2
+        try:
+            r = requests.get(
+                f"{base_url}/lol-end-of-game/v1/gameclient-eog-stats-block",
+                auth=auth,
+                verify=False,
+            )
+            print(f"🔍 statsv2: {r.json()}")
+            print("------------------------------------------------")
+
+        except Exception as e:
+            print(f"❌ Error getting stats: {e}")
+
         # Get user data
         try:
             r = requests.get(
-                f"{base_url}/lol-ranked/v1/current-ranked-stats", auth=auth, verify=False
+                f"{base_url}/lol-ranked/v1/current-ranked-stats",
+                auth=auth,
+                verify=False,
             )
             print(f"🔍 stats: {r.json()}")
+            print("------------------------------------------------")
 
         except Exception as e:
             print(f"❌ Error getting stats: {e}")

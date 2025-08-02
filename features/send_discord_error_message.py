@@ -20,7 +20,7 @@ def send_discord_error_message(error):
             print(f"❌ Error sending discord error message: {response.status_code}")
 
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print(f"❌ Unexpected error sending error message to discord: {e}")
 
 
 def log_and_discord(error):

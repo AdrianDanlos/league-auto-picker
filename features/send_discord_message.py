@@ -45,7 +45,7 @@ def send_discord_message(base_url, auth, game_data):
                 )
 
     except Exception as e:
-        log_and_discord(f"❌ Unexpected error: {e}")
+        log_and_discord(f"❌ Unexpected error sending discord message: {e}")
 
 
 def get_gameflow_phase(base_url, auth):
@@ -65,7 +65,7 @@ def get_gameflow_phase(base_url, auth):
             )
 
     except Exception as e:
-        log_and_discord(f"❌ Unexpected error: {e}")
+        log_and_discord(f"❌ Unexpected error sending discord message: {e}")
 
 
 def build_porofessor_url(region, summoner_name):
@@ -110,4 +110,4 @@ def get_rank_data(base_url, auth, queueType):
             )
 
     except Exception as e:
-        log_and_discord(f"❌ Unexpected error: {e}")
+        log_and_discord(f"❌ Unexpected error sending discord message: {e}")
