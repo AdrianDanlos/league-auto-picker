@@ -1,6 +1,8 @@
 import requests
 import time
 
+from features.send_discord_error_message import log_and_discord
+
 
 def swap_role(session, base_url, auth, config):
     """
@@ -60,7 +62,7 @@ def swap_role(session, base_url, auth, config):
             break
 
     if not assigned_role:
-        print("[Role Swap] Could not determine assigned role.")
+        log_and_discord("[Role Swap] Could not determine assigned role.")
         return
 
     preferred_role = config.get("preferred_role", "")
@@ -81,7 +83,9 @@ def swap_role(session, base_url, auth, config):
             break
 
     if not swap_target:
-        print("[Role Swap] No teammate found with a preferred role to swap.")
+        log_and_discord(
+            f"[Role Swap] No teammate found with a preferred role to swap.:{my_team}"
+        )
         return
 
     # Find the correct swap ID from positionSwaps
@@ -101,7 +105,9 @@ def swap_role(session, base_url, auth, config):
     if not swap_id:
         print(f"[Role Swap] No position swap found for cellId {target_cell_id}.")
         print(f"[Role Swap] Available swaps: {position_swaps}")
-        print("🟢 Retrying swap_role...")
+        log_and_discord(
+            f"[Role Swap] No position swap found for cellId {target_cell_id}. Available swaps: {position_swaps}"
+        )
         time.sleep(5)
         swap_role(session, base_url, auth, config)
 
@@ -149,6 +155,9 @@ def swap_role(session, base_url, auth, config):
                         print(
                             f"[Role Swap] Error: No matching ID found for swap_id {swap_id} "
                         )
+                        log_and_discord(
+                            f"[Role Swap] Error: No matching ID found for swap_id {swap_id} "
+                        )
 
                     # Check trade state
                     position_swap_state = position_swap.get("state")
@@ -170,5 +179,8 @@ def swap_role(session, base_url, auth, config):
             print(
                 f"[Role Swap] Role swap error: {request_res.status_code} {request_res.text}"
             )
+            log_and_discord(
+                f"[Role Swap] Role swap error: {request_res.status_code} {request_res.text}"
+            )
     except Exception as e:
-        print(f"[Role Swap] Exception during swap request: {e}")
+        log_and_discord(f"[Role Swap] Exception during swap request: {e}")

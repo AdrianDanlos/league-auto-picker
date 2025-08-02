@@ -4,6 +4,8 @@ import json
 import threading
 import datetime
 
+from features.send_discord_error_message import log_and_discord
+
 
 def send_champ_select_message(session, base_url, auth):
     # Load messages from config file
@@ -34,10 +36,11 @@ def send_champ_select_message(session, base_url, auth):
         if res.status_code == 200:
             print(f"[Chat] Sent message: {message}")
         else:
-            print(f"[Chat] Failed to send message: {res.status_code}, {res}")
+            log_and_discord(f"[Chat] Failed to send message: {res.status_code}, {res}")
     else:
-        print("[Chat] Could not find chatId in session. Session object:")
-        print(session)
+        log_and_discord(
+            f"[Chat] Could not find chatId in session. Session object:{session}"
+        )
 
 
 def schedule_champ_select_message(session, base_url, auth, delay=20):

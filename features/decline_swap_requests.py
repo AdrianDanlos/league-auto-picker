@@ -1,6 +1,7 @@
 import requests
 import time
 
+from features.send_discord_error_message import log_and_discord
 from utils import get_session
 
 
@@ -82,13 +83,13 @@ def decline_incoming_swap_requests(base_url, auth):
                 elif swap_type == "trade":
                     decline_url = f"{base_url}/lol-champ-select/v1/session/trades/{swap_id}/decline"
                 else:
-                    print(f"[Swap Decline] Unknown swap type: {swap_type}")
+                    log_and_discord(f"[Swap Decline] Unknown swap type: {swap_type}")
                     continue
 
                 try:
                     decline_res = requests.post(decline_url, auth=auth, verify=False)
                 except Exception as e:
-                    print(
+                    log_and_discord(
                         f"[Swap Decline] Exception while trying to decline incoming swap request: {e}"
                     )
 
@@ -97,14 +98,15 @@ def decline_incoming_swap_requests(base_url, auth):
                         f"[Swap Decline] Declined incoming {swap_type} swap request (ID: {swap_id})"
                     )
                 else:
-                    print(
+                    log_and_discord(
                         f"[Swap Decline] Failed to decline {swap_type} swap: {decline_res.status_code}"
                     )
+
             else:
                 # No received requests
                 continue
         except Exception as e:
-            print(
+            log_and_discord(
                 f"[Swap Decline] Exception while handling incoming swap requests: {e}"
             )
             return

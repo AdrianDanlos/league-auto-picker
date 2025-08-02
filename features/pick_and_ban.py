@@ -6,7 +6,8 @@ from features.select_default_runes_and_summs import (
     select_default_runes,
     select_summoner_spells,
 )
-from utils import get_session
+from features.send_discord_error_message import log_and_discord
+from utils import get_session, get_summoner_name
 
 # Global variable to store the data for discord's message
 game_data = {
@@ -91,7 +92,7 @@ def is_champion_available(
 
         return True
     except Exception as e:
-        print(f"⚠️ Error in is_champion_available for {champion_name}: {e}")
+        log_and_discord(f"⚠️ Error in is_champion_available for {champion_name}: {e}")
         return False
 
 
@@ -110,7 +111,7 @@ def find_best_counter_pick(
     champion_ids,
 ):
     if not enemy_champions:
-        print("🔍 Debug: No enemy champions found")
+        log_and_discord("🔍 Debug: No enemy champions found")
         return None
 
     best_pick = None
@@ -146,13 +147,14 @@ def find_best_counter_pick(
                             best_pick = counter_champ
                             earliest_position = enemy_index
                     except Exception as e:
-                        print(
+                        log_and_discord(
                             f"⚠️ Error in is_champion_available for {counter_champ}: {e}"
                         )
                         continue
         except Exception as e:
-            print(f"⚠️ Error in counter-pick iteration: {e}")
-            print(f"⚠️ Lane picks config: {lane_picks_config}")
+            log_and_discord(
+                f"⚠️ Error in counter-pick iteration: {e}\n ⚠️ Lane picks config: {lane_picks_config}"
+            )
             return None
 
     print(f"🔍 Debug: Final best pick: {best_pick}")
@@ -170,22 +172,6 @@ def create_discord_message(best_pick, session):
     game_data["summoner_name"] = get_summoner_name(session)
     game_data["assigned_lane"] = get_assigned_lane(session)
     game_data["region"] = get_region(session)
-
-
-def get_summoner_name(session):
-    local_player_cell_id = session.get("localPlayerCellId")
-
-    # Find your player info in myTeam
-    for player in session.get("myTeam", []):
-        if player["cellId"] == local_player_cell_id:
-            game_name = player.get("gameName", "")
-            tag_line = player.get("tagLine", "")
-
-            if game_name and tag_line:
-                # FIXME: This is porofessor and opgg format. If we intend to reuse this function we should be careful not to break the link
-                return f"{game_name}-{tag_line}"
-            elif game_name:
-                return game_name
 
 
 def pick_and_ban(base_url, auth, config):
@@ -257,7 +243,7 @@ def pick_and_ban(base_url, auth, config):
             my_cell_id = session.get("localPlayerCellId")
             assigned_lane = get_assigned_lane(session)
             if not assigned_lane:
-                print("Could not determine assigned lane.")
+                log_and_discord("Could not determine assigned lane.")
                 time.sleep(4)
                 continue
             lane_key = assigned_lane.upper()
@@ -286,7 +272,7 @@ def pick_and_ban(base_url, auth, config):
                         if isinstance(champion_id, (int, str)):
                             ally_champion_ids.add(champion_id)
                         else:
-                            print(
+                            log_and_discord(
                                 f"⚠️ Warning: Invalid champion ID type: {type(champion_id)}, value: {champion_id}"
                             )
 
@@ -316,9 +302,8 @@ def pick_and_ban(base_url, auth, config):
                                 if res.status_code == 204:
                                     print(f"✅ Banned {champ}!")
                                 else:
-                                    print(
-                                        f"❌ Failed to ban {champ}: "
-                                        f"{res.status_code}"
+                                    log_and_discord(
+                                        f"❌ Failed to ban {champ}: {res.status_code}"
                                     )
 
                         elif action["type"] == "pick":
@@ -344,7 +329,7 @@ def pick_and_ban(base_url, auth, config):
                                     "We have already picked a champion, skipping pick and ban"
                                 )
                                 return
-                           
+
                             try:
                                 lane_picks_config = config["picks"].get(lane_key, {})
 
@@ -370,14 +355,13 @@ def pick_and_ban(base_url, auth, config):
                                     CHAMPION_IDS,
                                 )
                             except Exception as e:
-                                print(f"⚠️ Error in pick logic: {e}")
-                                print(f"⚠️ Error type: {type(e)}")
+                                log_and_discord(f"⚠️ Error in pick logic: {e}")
                                 best_pick = None
                                 banned_champions_ids = []  # Fallback to empty list
 
                             # If no counter-pick found, use DEFAULT
                             if not best_pick:
-                                print("🔍 Debug: No counter pick found")
+                                print("No counter pick found")
                                 mode = (
                                     "RANDOM_MODE"
                                     if config.get("random_mode_active", False)
@@ -425,12 +409,13 @@ def pick_and_ban(base_url, auth, config):
                                     )
                                     return
                                 else:
-                                    print(
-                                        f"❌ Failed to pick {best_pick}: "
-                                        f"{res.status_code}"
+                                    log_and_discord(
+                                        f"❌ Failed to pick {best_pick}: {res.status_code}"
                                     )
                             else:
-                                print("❌ No suitable champion found to pick.")
+                                log_and_discord(
+                                    "❌ No suitable champion found to pick."
+                                )
 
             # Wait 4 seconds before next iteration
             time.sleep(4)
@@ -439,5 +424,5 @@ def pick_and_ban(base_url, auth, config):
             print("\n🛑 Pick and ban monitoring stopped by user.")
             break
         except Exception as e:
-            print(f"❌ Error in pick and ban loop: {e}")
+            log_and_discord(f"❌ Error in pick and ban loop: {e}")
             break

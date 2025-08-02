@@ -1,6 +1,8 @@
 import requests
 from urllib.parse import quote
 
+from features.send_discord_error_message import log_and_discord
+
 webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoymtnU4o9br3grXkV4HJIl2WYtTAY6BQ2__D5MyAbZqpv-FsW3lEKjPcAN2"
 
 
@@ -32,10 +34,12 @@ def send_discord_message(base_url, auth, game_data):
             if response.status_code == 204:
                 print("✅ Discord message sent")
             else:
-                print(f"❌ Error sending discord message: {response.status_code}")
+                log_and_discord(
+                    f"❌ Error sending discord message: {response.status_code}"
+                )
 
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        log_and_discord(f"❌ Unexpected error: {e}")
 
 
 def get_gameflow_phase(base_url, auth):
@@ -50,12 +54,12 @@ def get_gameflow_phase(base_url, auth):
             print("✅ phase: ", response.json())
             return response.json()
         else:
-            print(f"❌ Failed to get phase {response.status_code}")
-            if response.text:
-                print(f"📝 Error response: {response.text}")
+            log_and_discord(
+                f"❌ Failed to get phase {response.status_code}, {response.text}"
+            )
 
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        log_and_discord(f"❌ Unexpected error: {e}")
 
 
 def build_porofessor_url(region, summoner_name):

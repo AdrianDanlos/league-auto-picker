@@ -1,6 +1,7 @@
 import requests
 import time
 
+from features.send_discord_error_message import log_and_discord
 from utils import get_session
 
 
@@ -40,7 +41,9 @@ def accept_queue(base_url, auth):
                     )
 
                     if accept.status_code != 204:
-                        print(f"❌ Failed to accept queue: {accept.status_code}")
+                        log_and_discord(
+                            f"❌ Failed to accept queue: {accept.status_code} - {accept.text}"
+                        )
                         break
 
                     print("✅ Queue accepted!")
@@ -79,5 +82,5 @@ def accept_queue(base_url, auth):
 
             time.sleep(1)
         except Exception as e:
-            print("[Queue Accept Error]", e)
+            log_and_discord(f"[Queue Accept Error]: {e}")
             time.sleep(5)

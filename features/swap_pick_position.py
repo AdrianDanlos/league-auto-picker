@@ -1,5 +1,6 @@
 import requests
 import time
+from features.send_discord_error_message import log_and_discord
 from utils import get_session
 
 
@@ -74,13 +75,13 @@ def swap_pick_position(base_url, auth):
                 )
                 return
         except Exception as e:
-            print(f"[Pick Swap] Failed to fetch session: {e}")
+            log_and_discord(f"[Pick Swap] Failed to fetch session: {e}")
             break
 
         my_cell_id = session.get("localPlayerCellId")
         my_pick_order = get_pick_order(session, my_cell_id)
         if not my_pick_order:
-            print("[Pick Swap] Could not determine your pick order.")
+            log_and_discord("[Pick Swap] Could not determine your pick order.")
             break
 
         # If already in 5th position, no need to swap
@@ -115,7 +116,7 @@ def swap_pick_position(base_url, auth):
                     else:
                         break  # Assume no ongoing swap if endpoint fails {ongoing_res.status_code}
                 except Exception as e:
-                    print(f"[Pick Swap] Failed to check ongoing swap: {e}")
+                    log_and_discord(f"[Pick Swap] Failed to check ongoing swap: {e}")
                     break  # Proceed anyway if we can't check
 
             if wait_count >= 10:
@@ -140,7 +141,7 @@ def swap_pick_position(base_url, auth):
             my_team = session.get("myTeam", [])
             my_pick_order = get_pick_order(session, my_cell_id)
             if not my_pick_order:
-                print("[Pick Swap] Could not determine your pick order.")
+                log_and_discord("[Pick Swap] Could not determine your pick order.")
                 break
 
             # 3. Calculate list of valid targets (players below you, excluding 5th TOP and already attempted)
@@ -208,7 +209,7 @@ def swap_pick_position(base_url, auth):
                     # )
                     attempted_cell_ids.add(cell_id)
             except Exception as e:
-                print(
+                log_and_discord(
                     f"[Pick Swap] Exception during swap request for cellId {cell_id}: {e}"
                 )
                 attempted_cell_ids.add(cell_id)
