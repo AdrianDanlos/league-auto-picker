@@ -16,6 +16,8 @@ game_data = {
     "picked_champion": None,
     "summoner_name": None,
     "assigned_lane": None,
+    "region": None,
+    "queueType": None,
 }
 
 
@@ -319,20 +321,21 @@ def pick_and_ban(base_url, auth, config):
 
                         elif action["type"] == "pick":
                             print(
-                                "⏰ It's time to pick! Waiting until 5 seconds are left before making selection..."
+                                "⏰ It's time to pick! Waiting before making selection..."
                             )
+                            time.sleep(10)
 
-                            pick_time = False
-                            while not pick_time:
-                                time.sleep(1)
-                                session = get_session(base_url, auth)
-                                if (
-                                    session.get("timer", {}).get(
-                                        "adjustedTimeLeftInPhase", ""
-                                    )
-                                    < INSTA_PICK_TIME_MILIS
-                                ):
-                                    pick_time = True
+                            # pick_time = False
+                            # while not pick_time:
+                            #     time.sleep(1)
+                            #     session = get_session(base_url, auth)
+                            #     if (
+                            #         session.get("timer", {}).get(
+                            #             "adjustedTimeLeftInPhase", ""
+                            #         )
+                            #         < INSTA_PICK_TIME_MILIS
+                            #     ):
+                            #         pick_time = True
 
                             if game_data["picked_champion"]:
                                 print(
@@ -405,7 +408,9 @@ def pick_and_ban(base_url, auth, config):
                                             )
 
                             if best_pick:
+                                print(f"🔍 Debug: Picking {best_pick}")
                                 champ_id = CHAMPION_IDS.get(best_pick)
+                                print(f"🔍 Debug: Champ ID: {champ_id}")
                                 res = requests.patch(
                                     f"{base_url}/lol-champ-select/v1/session/actions/"
                                     f"{action['id']}",
@@ -420,7 +425,7 @@ def pick_and_ban(base_url, auth, config):
                                     select_summoner_spells(
                                         base_url, auth, config, best_pick, assigned_lane
                                     )
-                                    return
+                                    break
                                 else:
                                     log_and_discord(
                                         f"❌ Failed to pick {best_pick}: {res.status_code}"
