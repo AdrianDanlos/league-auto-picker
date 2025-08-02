@@ -2,7 +2,7 @@ import requests
 import time
 import random
 
-from constants import FLEX_CODE, INSTA_PICK_TIME_MILIS, SOLOQ_CODE
+from constants import FLEX_CODE, SOLOQ_CODE
 from features.select_default_runes_and_summs import (
     select_default_runes,
     select_summoner_spells,
@@ -30,6 +30,16 @@ def fetch_champion_ids():
         f"https://ddragon.leagueoflegends.com/cdn/{version}/data/en_US/champion.json"
     ).json()
     return {champ["name"]: int(champ["key"]) for champ in champ_data["data"].values()}
+
+
+def fetch_champion_names():
+    version = requests.get(
+        "https://ddragon.leagueoflegends.com/api/versions.json"
+    ).json()[0]
+    champ_data = requests.get(
+        f"https://ddragon.leagueoflegends.com/cdn/{version}/data/en_US/champion.json"
+    ).json()
+    return {int(champ["key"]): champ["name"] for champ in champ_data["data"].values()}
 
 
 def get_assigned_lane(session):
@@ -187,6 +197,26 @@ def get_queueType(session):
         return "RANKED_FLEX_SR"
 
 
+def is_champion_locked_in(base_url, auth):
+    session = get_session(base_url, auth)
+    my_id = session["localPlayerCellId"]
+    for actions in session["actions"]:
+        for a in actions:
+            if a.get("actorCellId") == my_id and a.get("type") == "pick":
+                return a.get("completed", False)
+    return False
+
+
+def get_locked_in_champion(base_url, auth):
+    session = get_session(base_url, auth)
+    my_id = session["localPlayerCellId"]
+    for actions in session["actions"]:
+        for a in actions:
+            if a.get("actorCellId") == my_id and a.get("type") == "pick":
+                return a.get("championId", 0)
+    return None
+
+
 def pick_and_ban(base_url, auth, config):
     """
     Continuously monitors the League of Legends champion select session and automates the pick and ban process.
@@ -323,27 +353,23 @@ def pick_and_ban(base_url, auth, config):
                             print(
                                 "⏰ It's time to pick! Waiting before making selection..."
                             )
-                            time.sleep(10)
+                            timeLeftToPickMilis = session.get("timer", {}).get(
+                                "adjustedTimeLeftInPhase", ""
+                            )
 
-                            # pick_time = False
-                            # while not pick_time:
-                            #     time.sleep(1)
-                            #     session = get_session(base_url, auth)
-                            #     if (
-                            #         session.get("timer", {}).get(
-                            #             "adjustedTimeLeftInPhase", ""
-                            #         )
-                            #         < INSTA_PICK_TIME_MILIS
-                            #     ):
-                            #         pick_time = True
+                            # Pick when there is 1 second left
+                            time.sleep((timeLeftToPickMilis - 1000) / 1000)
 
-                            if game_data["picked_champion"]:
+                            if is_champion_locked_in(base_url, auth):
+                                CHAMPION_NAMES = fetch_champion_names()
+                                locked_in_champion_id = get_locked_in_champion()
+                                champion_name = CHAMPION_NAMES.get(
+                                    locked_in_champion_id
+                                )
                                 print(
                                     "We have already picked a champion, skipping pick and ban"
                                 )
-                                create_discord_message(
-                                    game_data["picked_champion"], session
-                                )
+                                create_discord_message(champion_name, session)
                                 return
 
                             try:
