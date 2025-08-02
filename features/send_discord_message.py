@@ -9,12 +9,12 @@ webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoym
 def send_discord_message(base_url, auth, game_data):
     try:
         tier, division, wins, loses = get_rank_data(
-            base_url, auth, game_data.get("queueType")
+            base_url, auth, game_data.get("queueType", "Unknown")
         ).values()
         gameflow_phase = get_gameflow_phase(base_url, auth)
         if gameflow_phase == "InProgress":
-            summoner_name = quote(game_data.get("summoner_name"))
-            region = game_data.get("region")
+            summoner_name = quote(game_data.get("summoner_name", "Unknown"))
+            region = game_data.get("region", "Unknown")
 
             porofessor_url = build_porofessor_url(region, summoner_name)
             opgg_url = build_opgg_url(region, summoner_name)
@@ -27,7 +27,7 @@ def send_discord_message(base_url, auth, game_data):
                 f"👤 **Player:** `{game_data.get('summoner_name', 'Player')}`\n"
                 f"⚔️ **Champion:** `{game_data.get('picked_champion', 'None')}`\n"
                 f"🛡️ **Role:** `{game_data.get('assigned_lane', 'Unknown')}`\n"
-                f"🏆 **Queue:** {game_data.get('queueType')}\n"
+                f"🏆 **Queue:** {game_data.get('queueType', 'Unknown')}\n"
                 f"📊 **Rank:** {tier} {division} | **Wins:** {wins} | **Losses:** {loses}\n\n"
                 f"🌍 **Porofessor:** <{porofessor_url}>\n"
                 f"🌍 **OPGG:** <{opgg_url}>\n\n\n"
@@ -99,10 +99,10 @@ def get_rank_data(base_url, auth, queueType):
             player_data = response.json()
             ranked_data = player_data["queueMap"][queueType]
             return {
-                "tier": ranked_data.get("tier"),
-                "division": ranked_data.get("division"),
-                "wins": ranked_data.get("wins"),
-                "loses": ranked_data.get("losses"),
+                "tier": ranked_data.get("tier", "Unknown"),
+                "division": ranked_data.get("division", "Unknown"),
+                "wins": ranked_data.get("wins", 0),
+                "loses": ranked_data.get("losses", 0),
             }
         else:
             log_and_discord(
