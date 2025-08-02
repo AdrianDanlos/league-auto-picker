@@ -327,6 +327,7 @@ def pick_and_ban(base_url, auth, config):
                             )
 
                             pick_time = False
+                            target_time_in_milis = 5000
                             while not pick_time:
                                 time.sleep(1)
                                 session = get_session(base_url, auth)
@@ -334,7 +335,7 @@ def pick_and_ban(base_url, auth, config):
                                     session.get("timer", {}).get(
                                         "adjustedTimeLeftInPhase", ""
                                     )
-                                    < 5000
+                                    < target_time_in_milis
                                 ):
                                     pick_time = True
 
