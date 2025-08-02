@@ -368,20 +368,29 @@ def pick_and_ban(base_url, auth, config):
                             print(
                                 "⏰ It's time to pick! Waiting before making selection..."
                             )
-                            timeLeftToPickMilis = session.get("timer", {}).get(
-                                "adjustedTimeLeftInPhase", ""
-                            )
-                            print(f"🔍 Debug: Time left to pick: {timeLeftToPickMilis}")
-                            print(
-                                f"timeLeftToPickMilis - 5000) / 1000: {(timeLeftToPickMilis - 5000) / 1000}"
-                            )
-                            # Pick when there is 1 second left
-                            time.sleep((timeLeftToPickMilis - 5000) / 1000)
-                            print("Sleep Over")
 
+                            timeLeftToPickMilis = session.get("timer", {}).get(
+                                "adjustedTimeLeftInPhase", 0
+                            )
+                            print(
+                                f"🔍 Debug: Time left to pick: {timeLeftToPickMilis}ms"
+                            )
+
+                            # Calculate sleep time, ensuring it's not negative
+                            sleep_time = max(0, (timeLeftToPickMilis - 5000) / 1000)
+                            print(f"🔍 Debug: Sleeping for {sleep_time} seconds")
+
+                            # Pick when there is 5 seconds left (5000ms)
+                            if sleep_time > 0:
+                                time.sleep(sleep_time)
+                                print("Sleep Over")
+
+                            # Check if already locked in before waiting
                             if is_champion_locked_in(base_url, auth):
                                 CHAMPION_NAMES = fetch_champion_names()
-                                locked_in_champion_id = get_locked_in_champion(base_url, auth)
+                                locked_in_champion_id = get_locked_in_champion(
+                                    base_url, auth
+                                )
                                 champion_name = CHAMPION_NAMES.get(
                                     locked_in_champion_id
                                 )
