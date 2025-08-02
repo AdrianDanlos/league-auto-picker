@@ -38,7 +38,6 @@ def test_rune_page_reset():
 
             def get_region(session):
                 region = session["chatDetails"].get("targetRegion")
-                print(f"🔍 Debug: Region: {region}")
                 if region == "eu1":
                     return "euw"
                 if region == "sa1":

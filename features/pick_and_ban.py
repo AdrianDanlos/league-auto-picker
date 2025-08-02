@@ -323,10 +323,27 @@ def pick_and_ban(base_url, auth, config):
 
                         elif action["type"] == "pick":
                             print(
-                                "⏰ It's time to pick! Waiting 10 seconds before making selection..."
+                                "⏰ It's time to pick! Waiting until 5 seconds are left before making selection..."
                             )
-                            time.sleep(10)
 
+                            pick_time = False
+                            while not pick_time:
+                                time.sleep(1)
+                                session = get_session(base_url, auth)
+                                if (
+                                    session.get("timer", {}).get(
+                                        "adjustedTimeLeftInPhase", ""
+                                    )
+                                    < 5000
+                                ):
+                                    pick_time = True
+
+                            if game_data["picked_champion"]:
+                                print(
+                                    "We have already picked a champion, skipping pick and ban"
+                                )
+                                return
+                           
                             try:
                                 lane_picks_config = config["picks"].get(lane_key, {})
 
@@ -405,7 +422,7 @@ def pick_and_ban(base_url, auth, config):
                                     select_summoner_spells(
                                         base_url, auth, config, best_pick, assigned_lane
                                     )
-                                    break
+                                    return
                                 else:
                                     print(
                                         f"❌ Failed to pick {best_pick}: "
