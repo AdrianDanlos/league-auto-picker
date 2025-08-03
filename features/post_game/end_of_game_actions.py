@@ -15,5 +15,5 @@ def start_end_of_game_actions(base_url, auth):
             print(rank_changes)
             print(game_data)
             send_discord_post_game_message(game_data, rank_changes)
-            time.sleep(3)
             break
+        time.sleep(5)

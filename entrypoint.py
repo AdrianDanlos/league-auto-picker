@@ -45,7 +45,7 @@ def main():
     try:
         while not get_session(base_url, auth):
             # checks when game is over and sends post game stats
-            start_end_of_game_actions(base_url, auth)
+            # start_end_of_game_actions(base_url, auth)
 
             # Wait for a valid session (champ select)
             # This blocks until queue is accepted
