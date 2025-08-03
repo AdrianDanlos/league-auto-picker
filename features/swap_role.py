@@ -94,13 +94,41 @@ def swap_role(session, base_url, auth, config):
     swap_id = None
 
     for swap in position_swaps:
+        # Check if this swap involves the target cellId
+        # Case 1: Target cellId is the initiator (offering to swap)
+        # Case 2: Target cellId is the receiver (being offered a swap)
+        # Case 3: Target cellId is involved in any way
         if (
-            swap.get("cellId") == target_cell_id
-            or swap.get("targetCellId") == target_cell_id
-            or swap.get("receiverCellId") == target_cell_id
+            swap.get("cellId") == target_cell_id  # Target is initiator
+            or swap.get("targetCellId") == target_cell_id  # Target is receiver
+            or swap.get("receiverCellId")
+            == target_cell_id  # Target is receiver (alternative field)
         ):
-            swap_id = swap.get("id")
-            break
+            # Additional check: make sure this swap involves our current position
+            # We want to swap with the target, so either:
+            # - We initiate swap TO target position, OR
+            # - Target initiates swap TO our position
+            if (
+                (
+                    swap.get("cellId") == my_cell_id
+                    and swap.get("targetCellId") == target_cell_id
+                )
+                or (
+                    swap.get("cellId") == target_cell_id
+                    and swap.get("targetCellId") == my_cell_id
+                )
+                or (
+                    swap.get("cellId") == my_cell_id
+                    and swap.get("receiverCellId") == target_cell_id
+                )
+                or (
+                    swap.get("cellId") == target_cell_id
+                    and swap.get("receiverCellId") == my_cell_id
+                )
+            ):
+                swap_id = swap.get("id")
+                print(f"[Role Swap] Found matching swap: {swap}")
+                break
 
     if not swap_id:
         print(f"[Role Swap] No position swap found for cellId {target_cell_id}.")
