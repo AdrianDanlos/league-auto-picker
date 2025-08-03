@@ -203,7 +203,7 @@ def swap_pick_position(base_url, auth):
                     attempted_cell_ids.add(cell_id)
 
                 # Wait a bit after each request
-                time.sleep(5)
+                time.sleep(4)
             except Exception as e:
                 log_and_discord(
                     f"[Pick Swap] Exception during swap request for cellId {cell_id}: {e}"
@@ -213,3 +213,5 @@ def swap_pick_position(base_url, auth):
             # 7. Continue to next iteration (which will recalculate everything)
 
         # After inner loop ends, continue to outer loop to reset and try again
+        # Add a small delay to prevent rapid re-execution when no valid targets are found
+        time.sleep(4)
