@@ -45,7 +45,7 @@ def test_player_data():
         # Get final stats after game v2
         try:
             r = requests.get(
-                f"{base_url}/lol-end-of-game/v1/gameclient-eog-stats-block",
+                f"{base_url}/lol-match-history/v1/products/lol/current-summoner/matches",
                 auth=auth,
                 verify=False,
             )
@@ -62,7 +62,7 @@ def test_player_data():
                 auth=auth,
                 verify=False,
             )
-            print(f"🔍 stats: {r.json()}")
+            print(f"🔍 statss: {r.json()}")
             print("------------------------------------------------")
 
         except Exception as e:

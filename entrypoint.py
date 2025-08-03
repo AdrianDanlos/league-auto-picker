@@ -3,13 +3,20 @@ import json
 import urllib3
 import threading
 
-from features.send_discord_message import send_discord_message
+from features.post_game.end_of_game_actions import start_end_of_game_actions
+from features.send_discord_message import (
+    send_discord_pre_game_message,
+)
 from features.accept_queue import accept_queue
 from features.pick_and_ban import pick_and_ban, game_data
 from features.decline_swap_requests import decline_incoming_swap_requests
 from features.swap_role import swap_role
 from features.swap_pick_position import swap_pick_position
 from features.send_chat_message import schedule_champ_select_message
+from features.lp_tracker import (
+    save_pre_game_lp,
+)
+from features.pick_and_ban import get_queueType
 from lcu_connection import auth, base_url
 from lcu_connection import get_session
 from features.logger import logger
@@ -39,9 +46,17 @@ def main():
 
     try:
         while not get_session(base_url, auth):
+            # checks when game is over and sends post game stats
+            start_end_of_game_actions(base_url, auth)
+
             # Wait for a valid session (champ select)
             # This blocks until queue is accepted
             session = wait_for_champ_select(base_url, auth)
+
+            # Save LP before game starts
+            queue_type = get_queueType(session)
+            save_pre_game_lp(queue_type)
+
             schedule_champ_select_message(session, base_url, auth)
             swap_role(session, base_url, auth, config)
 
@@ -70,7 +85,8 @@ def main():
             swap_position_thread.join()
             decline_incoming_swap_requests_thread.join()
 
-            send_discord_message(base_url, auth, game_data)
+            send_discord_pre_game_message(base_url, auth, game_data)
+
             print("🟡 Session ended. Stopping pick and ban monitoring.")
 
             time.sleep(1)
