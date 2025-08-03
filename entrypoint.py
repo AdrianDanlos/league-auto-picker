@@ -13,9 +13,7 @@ from features.decline_swap_requests import decline_incoming_swap_requests
 from features.swap_role import swap_role
 from features.swap_pick_position import swap_pick_position
 from features.send_chat_message import schedule_champ_select_message
-from features.lp_tracker import (
-    save_pre_game_lp,
-)
+from features.post_game.post_game_utils import save_pre_game_lp
 from features.pick_and_ban import get_queueType
 from lcu_connection import auth, base_url
 from lcu_connection import get_session

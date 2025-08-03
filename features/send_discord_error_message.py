@@ -1,7 +1,7 @@
 import requests
 
 from lcu_connection import auth, base_url, get_session
-from utils import get_summoner_name
+from features.summoner_utils import get_summoner_name
 
 webhook_url = "https://discord.com/api/webhooks/1401132002693873674/2QGQjoLaeESr4QhK6qMt3ortI5ChkZIIfp3L3uznlgBDI96C1IBAmVWkklVc8LeyoJ-v"
 

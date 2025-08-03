@@ -9,7 +9,7 @@ from features.select_default_runes_and_summs import (
 )
 from features.send_discord_error_message import log_and_discord
 from lcu_connection import get_session
-from utils import get_summoner_name
+from features.summoner_utils import get_summoner_name
 
 # Global variable to store the data for discord's message
 game_data = {
