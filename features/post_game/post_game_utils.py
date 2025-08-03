@@ -82,12 +82,12 @@ def fetch_ranked_tiers_and_divisions():
 
 def save_pre_game_lp(queue_type):
     # save these 3 values (tier, division, lp) into global value that can be used anytime in the code
-    tier, division, lp = get_rank_data(base_url, auth, queue_type).values()
+    rank_data = get_rank_data(base_url, auth, queue_type)
     global pre_game_lp
     pre_game_lp = {
-        "tier": tier,
-        "division": division,
-        "lp": lp,
+        "tier": rank_data.get("tier"),
+        "division": rank_data.get("division"),
+        "lp": rank_data.get("lp"),
     }
 
 
