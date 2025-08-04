@@ -5,25 +5,9 @@ from features.send_discord_error_message import log_and_discord
 from lcu_connection import get_session
 
 
-def get_pick_order(session, cell_id):
+def decline_incoming_swap_requests(base_url, auth):
     """
-    Returns the pick order (1-based index) for the given cell_id based on your team's pick actions.
-    """
-    actions = session.get("actions", [])
-    my_team_cell_ids = {p["cellId"] for p in session.get("myTeam", [])}
-    pick_order = 1
-    for action_group in actions:
-        for action in action_group:
-            if action["type"] == "pick" and action["actorCellId"] in my_team_cell_ids:
-                if action["actorCellId"] == cell_id:
-                    return pick_order
-                pick_order += 1
-    return None
-
-
-def handle_incoming_swap_requests(base_url, auth):
-    """
-    Continuously monitor and accept incoming swap requests from players below us during champion select.
+    Continuously monitor and decline all incoming swap requests during champion select.
 
     This function runs in an infinite loop, polling the League Client API every second
     to check for incoming swap requests. It handles three types of swaps:
@@ -33,9 +17,8 @@ def handle_incoming_swap_requests(base_url, auth):
     3. Champion trades: Requests to trade champions between players
 
     The function prioritizes the most recent swap request (highest ID) when multiple
-    requests are received simultaneously. It automatically accepts swaps from players
-    with a higher pick order number (lower pick position) than us, and declines
-    swaps from players with a lower pick order number (higher pick position) than us.
+    requests are received simultaneously. It automatically declines any swap in the
+    "RECEIVED" state to maintain the user's preferred position and picks.
 
     Args:
         base_url (str): The base URL for the League Client API (e.g., "https://127.0.0.1:2999")
@@ -52,17 +35,10 @@ def handle_incoming_swap_requests(base_url, auth):
     """
     while True:
         try:
-            time.sleep(5)  # Wait 5 seconds between requests to prevent spam
+            time.sleep(1)  # poll every second for incoming requests
             session = get_session(base_url, auth)
             if not session:
                 return
-
-            # Get our pick order
-            my_cell_id = session.get("localPlayerCellId")
-            my_pick_order = get_pick_order(session, my_cell_id)
-            if not my_pick_order:
-                log_and_discord("[Swap Handler] Could not determine your pick order.")
-                continue
 
             # Get all types of swaps from the session
             position_swaps = session.get("positionSwaps", [])
@@ -98,102 +74,40 @@ def handle_incoming_swap_requests(base_url, auth):
                 most_recent_swap = max(all_received_swaps, key=lambda x: x.get("id", 0))
                 swap_id = most_recent_swap["id"]
                 swap_type = most_recent_swap["type"]
-                swap_data = most_recent_swap["swap"]
 
-                # Determine the requester's cell ID and pick order
-                requester_cell_id = None
+                # Decline the swap based on its type
                 if swap_type == "position":
-                    requester_cell_id = swap_data.get("requesterId")
+                    decline_url = f"{base_url}/lol-champ-select/v1/session/position-swaps/{swap_id}/decline"
                 elif swap_type == "pick_order":
-                    requester_cell_id = swap_data.get("requesterId")
+                    decline_url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/decline"
                 elif swap_type == "trade":
-                    requester_cell_id = swap_data.get("requesterId")
-
-                if not requester_cell_id:
-                    log_and_discord(
-                        f"[Swap Handler] Could not determine requester for {swap_type} swap"
-                    )
-                    continue
-
-                requester_pick_order = get_pick_order(session, requester_cell_id)
-                if not requester_pick_order:
-                    log_and_discord(
-                        f"[Swap Handler] Could not determine requester's pick order for {swap_type} swap"
-                    )
-                    continue
-
-                # Accept if requester has higher pick order number (lower pick position)
-                # Decline if requester has lower pick order number (higher pick position)
-                should_accept = requester_pick_order > my_pick_order
-
-                if should_accept:
-                    # Accept the swap
-                    if swap_type == "position":
-                        accept_url = f"{base_url}/lol-champ-select/v1/session/position-swaps/{swap_id}/accept"
-                    elif swap_type == "pick_order":
-                        accept_url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/accept"
-                    elif swap_type == "trade":
-                        accept_url = f"{base_url}/lol-champ-select/v1/session/trades/{swap_id}/accept"
-                    else:
-                        log_and_discord(
-                            f"[Swap Handler] Unknown swap type: {swap_type}"
-                        )
-                        continue
-
-                    try:
-                        accept_res = requests.post(accept_url, auth=auth, verify=False)
-                    except Exception as e:
-                        log_and_discord(
-                            f"[Swap Handler] Exception while trying to accept incoming swap request: {e}"
-                        )
-                        continue
-
-                    if accept_res.status_code == 200 or accept_res.status_code == 204:
-                        print(
-                            f"[Swap Handler] Accepted incoming {swap_type} swap request from player {requester_pick_order} (ID: {swap_id})"
-                        )
-                    else:
-                        log_and_discord(
-                            f"[Swap Handler] Failed to accept {swap_type} swap: {accept_res.status_code}"
-                        )
+                    decline_url = f"{base_url}/lol-champ-select/v1/session/trades/{swap_id}/decline"
                 else:
-                    # Decline the swap
-                    if swap_type == "position":
-                        decline_url = f"{base_url}/lol-champ-select/v1/session/position-swaps/{swap_id}/decline"
-                    elif swap_type == "pick_order":
-                        decline_url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/decline"
-                    elif swap_type == "trade":
-                        decline_url = f"{base_url}/lol-champ-select/v1/session/trades/{swap_id}/decline"
-                    else:
-                        log_and_discord(
-                            f"[Swap Handler] Unknown swap type: {swap_type}"
-                        )
-                        continue
+                    log_and_discord(f"[Swap Decline] Unknown swap type: {swap_type}")
+                    continue
 
-                    try:
-                        decline_res = requests.post(
-                            decline_url, auth=auth, verify=False
-                        )
-                    except Exception as e:
-                        log_and_discord(
-                            f"[Swap Handler] Exception while trying to decline incoming swap request: {e}"
-                        )
-                        continue
+                try:
+                    time.sleep(2)  # allow the player to accept or decline the swap before automatically declining it
+                    decline_res = requests.post(decline_url, auth=auth, verify=False)
+                except Exception as e:
+                    print(
+                        f"[Swap Decline] Exception while trying to decline incoming swap request. The player might have already accepted or declined the swap. Error: {e}"
+                    )
 
-                    if decline_res.status_code == 200 or decline_res.status_code == 204:
-                        print(
-                            f"[Swap Handler] Declined incoming {swap_type} swap request from player {requester_pick_order} (ID: {swap_id})"
-                        )
-                    else:
-                        log_and_discord(
-                            f"[Swap Handler] Failed to decline {swap_type} swap: {decline_res.status_code}"
-                        )
+                if decline_res.status_code == 200 or decline_res.status_code == 204:
+                    print(
+                        f"[Swap Decline] Declined incoming {swap_type} swap request (ID: {swap_id})"
+                    )
+                else:
+                    log_and_discord(
+                        f"[Swap Decline] Failed to decline {swap_type} swap: {decline_res.status_code}"
+                    )
 
             else:
                 # No received requests
                 continue
         except Exception as e:
             log_and_discord(
-                f"[Swap Handler] Exception while handling incoming swap requests: {e}"
+                f"[Swap Decline] Exception while handling incoming swap requests: {e}"
             )
             return
