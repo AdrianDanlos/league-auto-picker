@@ -17,4 +17,4 @@ def start_end_of_game_actions(base_url, auth):
             print("🟡 last_game_data: ", last_game_data)
             send_discord_post_game_message(last_game_data, rank_changes, game_data["summoner_name"])
             break
-        time.sleep(5)
+        time.sleep(3)

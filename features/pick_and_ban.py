@@ -232,6 +232,21 @@ def get_locked_in_champion(base_url, auth):
     return None
 
 
+def is_still_our_turn_to_pick(session, my_cell_id):
+    actions = session.get("actions", [])
+
+    for action_group in actions:
+        for action in action_group:
+            if (
+                action["actorCellId"] == my_cell_id
+                and action["isInProgress"]
+                and action["type"] == "pick"
+            ):
+                return True
+
+    return False
+
+
 def pick_and_ban(base_url, auth, config):
     """
     Continuously monitors the League of Legends champion select session and automates the pick and ban process.
@@ -394,6 +409,12 @@ def pick_and_ban(base_url, auth, config):
                                 )
                                 create_discord_message(champion_name, session)
                                 return
+
+                            # Re check if its still our turn, we might have switched pick positions on our turn to pick
+                            session = get_session(base_url, auth)
+                            is_our_turn = is_still_our_turn_to_pick(session, my_cell_id)
+                            if not is_our_turn:
+                                break
 
                             try:
                                 lane_picks_config = config["picks"].get(lane_key, {})
