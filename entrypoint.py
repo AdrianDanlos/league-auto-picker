@@ -9,7 +9,7 @@ from features.send_discord_message import (
 )
 from features.accept_queue import accept_queue
 from features.pick_and_ban import pick_and_ban, game_data
-from features.decline_swap_requests import handle_incoming_swap_requests
+from features.decline_swap_requests import decline_incoming_swap_requests
 from features.swap_role import swap_role
 from features.swap_pick_position import swap_pick_position
 from features.send_chat_message import schedule_champ_select_message
@@ -71,7 +71,7 @@ def main():
             )
 
             handle_incoming_swap_requests_thread = threading.Thread(
-                target=handle_incoming_swap_requests, args=(base_url, auth)
+                target=decline_incoming_swap_requests, args=(base_url, auth)
             )
 
             pick_ban_thread.daemon = True
