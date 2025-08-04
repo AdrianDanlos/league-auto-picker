@@ -3,81 +3,33 @@ from features.pick_and_ban import game_data
 from lcu_connection import auth, base_url
 from utils import get_rank_data
 
+# Global variable to store pre-game LP data
+pre_game_lp = {"tier": "Unknown", "division": "Unknown", "lp": 0}
+
 
 def fetch_ranked_tiers_and_divisions():
     """
-    Fetch ranked tiers and divisions from Data Dragon API.
+    Get ranked tiers and divisions for League of Legends.
     Returns a dictionary with tier information and their divisions.
     """
-    try:
-        # Get the latest version from Data Dragon
-        version_response = requests.get(
-            "https://ddragon.leagueoflegends.com/api/versions.json"
-        )
-        version_response.raise_for_status()
-        version = version_response.json()[0]
+    # Standard ranked tiers in League of Legends
+    standard_tiers = {
+        "IRON": ["IV", "III", "II", "I"],
+        "BRONZE": ["IV", "III", "II", "I"],
+        "SILVER": ["IV", "III", "II", "I"],
+        "GOLD": ["IV", "III", "II", "I"],
+        "PLATINUM": ["IV", "III", "II", "I"],
+        "EMERALD": ["IV", "III", "II", "I"],
+        "DIAMOND": ["IV", "III", "II", "I"],
+        "MASTER": [],
+        "GRANDMASTER": [],
+        "CHALLENGER": [],
+    }
 
-        # Fetch ranked data from Data Dragon
-        ranked_data_url = (
-            f"https://ddragon.leagueoflegends.com/cdn/{version}/data/en_US/ranked.json"
-        )
-        ranked_response = requests.get(ranked_data_url)
-        ranked_response.raise_for_status()
-
-        ranked_data = ranked_response.json()
-
-        # Extract tiers and divisions
-        tiers_and_divisions = {}
-
-        # Data Dragon ranked data structure may vary, so we'll create a comprehensive mapping
-        # Standard ranked tiers in League of Legends
-        standard_tiers = {
-            "IRON": ["IV", "III", "II", "I"],
-            "BRONZE": ["IV", "III", "II", "I"],
-            "SILVER": ["IV", "III", "II", "I"],
-            "GOLD": ["IV", "III", "II", "I"],
-            "PLATINUM": ["IV", "III", "II", "I"],
-            "EMERALD": ["IV", "III", "II", "I"],
-            "DIAMOND": ["IV", "III", "II", "I"],
-            "MASTER": [],
-            "GRANDMASTER": [],
-            "CHALLENGER": [],
-        }
-
-        # If Data Dragon provides specific tier data, use it
-        if "tiers" in ranked_data:
-            for tier_info in ranked_data["tiers"]:
-                tier_name = tier_info.get("name", "").upper()
-                divisions = tier_info.get("divisions", [])
-                if tier_name and divisions:
-                    tiers_and_divisions[tier_name] = divisions
-        else:
-            # Fallback to standard tiers
-            tiers_and_divisions = standard_tiers
-
-        return {"tiers_and_divisions": tiers_and_divisions, "version": version}
-
-    except requests.RequestException as e:
-        print(f"Error fetching ranked data from Data Dragon: {e}")
-        # Return standard tiers as fallback
-        return {
-            "tiers_and_divisions": {
-                "IRON": ["IV", "III", "II", "I"],
-                "BRONZE": ["IV", "III", "II", "I"],
-                "SILVER": ["IV", "III", "II", "I"],
-                "GOLD": ["IV", "III", "II", "I"],
-                "PLATINUM": ["IV", "III", "II", "I"],
-                "EMERALD": ["IV", "III", "II", "I"],
-                "DIAMOND": ["IV", "III", "II", "I"],
-                "MASTER": [],
-                "GRANDMASTER": [],
-                "CHALLENGER": [],
-            },
-            "version": "fallback",
-        }
-    except Exception as e:
-        print(f"Unexpected error in fetch_ranked_tiers_and_divisions: {e}")
-        return None
+    return {
+        "tiers_and_divisions": standard_tiers,
+        "version": "standard",
+    }
 
 
 def save_pre_game_lp(queue_type):
@@ -89,6 +41,80 @@ def save_pre_game_lp(queue_type):
         "division": rank_data.get("division"),
         "lp": rank_data.get("lp"),
     }
+    print("🟡 pre_game_lp: ", pre_game_lp)
+
+
+def get_win_loss_status(latest_game, participant_id):
+    """
+    Extract win/loss status for a specific participant from game data.
+
+    Args:
+        latest_game: The game data dictionary from the API
+        participant_id: The participant ID to check
+
+    Returns:
+        Dictionary with win status and result, or None if not found
+    """
+    try:
+        # Find the participant in the game
+        participant = None
+        for p in latest_game.get("participants", []):
+            if p.get("participantId") == participant_id:
+                participant = p
+                break
+
+        if not participant:
+            return None
+
+        # Check if the participant won
+        won = participant.get("stats", {}).get("win", False)
+
+        return {"won": won, "result": "Victory" if won else "Defeat"}
+    except Exception as e:
+        print(f"Error getting win/loss status: {e}")
+        return None
+
+
+def get_kda_stats(latest_game, participant_id):
+    """
+    Extract KDA statistics for a specific participant from game data.
+
+    Args:
+        latest_game: The game data dictionary from the API
+        participant_id: The participant ID to check
+
+    Returns:
+        Dictionary with KDA statistics, or None if not found
+    """
+    try:
+        # Find the participant in the game
+        participant = None
+        for p in latest_game.get("participants", []):
+            if p.get("participantId") == participant_id:
+                participant = p
+                break
+
+        if not participant:
+            return None
+
+        # Get KDA stats from participant stats
+        stats = participant.get("stats", {})
+        kills = stats.get("kills", 0)
+        deaths = stats.get("deaths", 0)
+        assists = stats.get("assists", 0)
+
+        # Calculate KDA ratio (avoid division by zero)
+        kda_ratio = (kills + assists) / deaths if deaths > 0 else (kills + assists)
+
+        return {
+            "kills": kills,
+            "deaths": deaths,
+            "assists": assists,
+            "kda_ratio": round(kda_ratio, 2),
+        }
+    except Exception as e:
+        print(f"Error getting KDA statistics: {e}")
+        return None
 
 
 def get_last_game_data():
@@ -147,20 +173,13 @@ def get_last_game_data():
         if current_participant_id is None:
             return {"error": "Could not find current player in the game"}
 
-        # Import the utility functions from formatthis.py
-        from tests.formatthis import (
-            get_win_loss_status,
-            get_champion_played,
-            get_kda_stats,
-        )
-
         # Get win/loss status
         win_loss = get_win_loss_status(latest_game, current_participant_id)
         if not win_loss:
             return {"error": "Could not get win/loss status"}
 
         # Get champion information
-        champion = get_champion_played(latest_game, current_participant_id)
+        champion = game_data["picked_champion"]
         if not champion:
             return {"error": "Could not get champion information"}
 
@@ -186,18 +205,19 @@ def get_last_game_data():
 def get_rank_changes():
     ranked_tiers_and_divisions = fetch_ranked_tiers_and_divisions()
 
+    # Get queue type from game_data, with fallback
+    queue_type = game_data.get("queueType") if game_data else "RANKED_SOLO_5x5"
+
     # Get current (post-game) rank data
-    tier, division, lp = get_rank_data(
-        base_url, auth, game_data.get("queueType")
-    ).values()
-    current_tier = tier
-    current_division = division
-    current_lp = lp
+    current_rank_data = get_rank_data(base_url, auth, queue_type)
+    current_tier = current_rank_data.get("tier", "Unknown")
+    current_division = current_rank_data.get("division", "Unknown")
+    current_lp = current_rank_data.get("lp", 0)
 
     # Get pre-game rank data
-    pre_tier = pre_game_lp.get("tier")
-    pre_division = pre_game_lp.get("division")
-    pre_lp = pre_game_lp.get("lp")
+    pre_tier = pre_game_lp.get("tier", "Unknown")
+    pre_division = pre_game_lp.get("division", "Unknown")
+    pre_lp = pre_game_lp.get("lp", 0)
 
     # Use the fetched ranked tiers and divisions data
     tiers_data = ranked_tiers_and_divisions.get("tiers_and_divisions", {})

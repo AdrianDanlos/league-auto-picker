@@ -25,9 +25,23 @@ def get_rank_data(base_url, auth, queueType):
             log_and_discord(
                 f"❌ Failed to get rank data {response.status_code}, {response.text}"
             )
+            return {
+                "tier": "Unknown",
+                "division": "Unknown",
+                "wins": 0,
+                "loses": 0,
+                "lp": 0,
+            }
 
     except Exception as e:
-        log_and_discord(f"❌ Unexpected error sending discord message: {e}")
+        log_and_discord(f"❌ Unexpected error getting rank data: {e}")
+        return {
+            "tier": "Unknown",
+            "division": "Unknown",
+            "wins": 0,
+            "loses": 0,
+            "lp": 0,
+        }
 
 
 def get_gameflow_phase(base_url, auth):
@@ -39,12 +53,14 @@ def get_gameflow_phase(base_url, auth):
         )
 
         if response.status_code == 200 or response.status_code == 204:
-            print("✅ phase: ", response.json())
+            # print("✅ phase: ", response.json())
             return response.json()
         else:
             log_and_discord(
                 f"❌ Failed to get phase {response.status_code}, {response.text}"
             )
+            return None
 
     except Exception as e:
-        log_and_discord(f"❌ Unexpected error sending discord message: {e}")
+        log_and_discord(f"❌ Unexpected error getting gameflow phase: {e}")
+        return None
