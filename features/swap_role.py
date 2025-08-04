@@ -1,10 +1,11 @@
 import requests
 import time
 
-from features.send_discord_error_message import log_and_discord
+from utils.logger import log_and_discord
+from utils import get_auth, get_base_url
 
 
-def swap_role(session, base_url, auth, config):
+def swap_role(session, config):
     """
     Checks for ongoing position swaps and attempts to swap roles if needed.
 
@@ -28,8 +29,6 @@ def swap_role(session, base_url, auth, config):
             - localPlayerCellId (int): The cell ID of the local player
             - myTeam (list): List of team participants with cellId and assignedPosition
             - positionSwaps (list): Available position swap options with id, cellId, etc.
-        base_url (str): The base URL for the League Client API (e.g., "https://127.0.0.1:2999")
-        auth (tuple): Authentication credentials for the API requests (username, password)
         config (dict): Configuration dictionary containing:
             - preferred_role (str): The user's preferred role (e.g., "TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY")
 
@@ -111,12 +110,12 @@ def swap_role(session, base_url, auth, config):
 
     # Request the swap using the swap ID
     request_swap_url = (
-        f"{base_url}/lol-champ-select/v1/session/position-swaps/{swap_id}/request"
+        f"{get_base_url()}/lol-champ-select/v1/session/position-swaps/{swap_id}/request"
     )
-    check_swap_url = f"{base_url}/lol-champ-select/v1/session/position-swaps"
+    check_swap_url = f"{get_base_url()}/lol-champ-select/v1/session/position-swaps"
 
     try:
-        request_res = requests.post(request_swap_url, auth=auth, verify=False)
+        request_res = requests.post(request_swap_url, auth=get_auth(), verify=False)
         if request_res.status_code == 204 or request_res.status_code == 200:
             print(
                 f"[Role Swap] Requested role swap with {preferred_role} (cellId {target_cell_id}, swapId {swap_id})"
@@ -133,7 +132,7 @@ def swap_role(session, base_url, auth, config):
 
                 try:
                     position_swaps_res = requests.get(
-                        check_swap_url, auth=auth, verify=False
+                        check_swap_url, auth=get_auth(), verify=False
                     )
                     if (
                         position_swaps_res.status_code == 204

@@ -1,13 +1,14 @@
 import requests
 
-from features.send_discord_error_message import log_and_discord
+from utils.logger import log_and_discord
+from utils import get_auth, get_base_url
 
 
-def select_default_runes(base_url, auth):
+def select_default_runes():
     try:
         response = requests.post(
-            f"{base_url}/lol-perks/v1/rune-recommender-auto-select",
-            auth=auth,
+            f"{get_base_url()}/lol-perks/v1/rune-recommender-auto-select",
+            auth=get_auth(),
             verify=False,
         )
 
@@ -22,15 +23,15 @@ def select_default_runes(base_url, auth):
         log_and_discord(f"❌ Unexpected error setting default runes and summs: {e}")
 
 
-def select_summoner_spells(base_url, auth, config, champion, assigned_lane):
+def select_summoner_spells(config, champion, assigned_lane):
     # Get champion-specific summoner spells, fallback to Default if not found
     summs_config = config.get("summs", {}).get(assigned_lane, {})
     champion_summs = summs_config.get(champion, summs_config.get("Default", {}))
 
     try:
         response = requests.patch(
-            f"{base_url}/lol-champ-select/v1/session/my-selection",
-            auth=auth,
+            f"{get_base_url()}/lol-champ-select/v1/session/my-selection",
+            auth=get_auth(),
             json=champion_summs,
             verify=False,
         )

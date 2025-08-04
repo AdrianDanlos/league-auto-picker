@@ -1,11 +1,11 @@
 import requests
 import time
 
-from features.send_discord_error_message import log_and_discord
-from lcu_connection import get_session
+from utils.logger import log_and_discord
+from utils import get_auth, get_base_url, get_session
 
 
-def decline_incoming_swap_requests(base_url, auth):
+def decline_incoming_swap_requests():
     """
     Continuously monitor and decline all incoming swap requests during champion select.
 
@@ -20,11 +20,6 @@ def decline_incoming_swap_requests(base_url, auth):
     requests are received simultaneously. It automatically declines any swap in the
     "RECEIVED" state to maintain the user's preferred position and picks.
 
-    Args:
-        base_url (str): The base URL for the League Client API (e.g., "https://127.0.0.1:2999")
-        auth (tuple): Authentication credentials for the API requests, typically (username, password)
-                     or a requests.auth.HTTPBasicAuth object
-
     Returns:
         None: This function runs indefinitely until interrupted or an error occurs
 
@@ -36,7 +31,7 @@ def decline_incoming_swap_requests(base_url, auth):
     while True:
         try:
             time.sleep(1)  # poll every second for incoming requests
-            session = get_session(base_url, auth)
+            session = get_session()
             if not session:
                 return
 
@@ -77,18 +72,22 @@ def decline_incoming_swap_requests(base_url, auth):
 
                 # Decline the swap based on its type
                 if swap_type == "position":
-                    decline_url = f"{base_url}/lol-champ-select/v1/session/position-swaps/{swap_id}/decline"
+                    decline_url = f"{get_base_url()}/lol-champ-select/v1/session/position-swaps/{swap_id}/decline"
                 elif swap_type == "pick_order":
-                    decline_url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/decline"
+                    decline_url = f"{get_base_url()}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/decline"
                 elif swap_type == "trade":
-                    decline_url = f"{base_url}/lol-champ-select/v1/session/trades/{swap_id}/decline"
+                    decline_url = f"{get_base_url()}/lol-champ-select/v1/session/trades/{swap_id}/decline"
                 else:
                     log_and_discord(f"[Swap Decline] Unknown swap type: {swap_type}")
                     continue
 
                 try:
-                    time.sleep(2)  # allow the player to accept or decline the swap before automatically declining it
-                    decline_res = requests.post(decline_url, auth=auth, verify=False)
+                    time.sleep(
+                        2
+                    )  # allow the player to accept or decline the swap before automatically declining it
+                    decline_res = requests.post(
+                        decline_url, auth=get_auth(), verify=False
+                    )
                 except Exception as e:
                     print(
                         f"[Swap Decline] Exception while trying to decline incoming swap request. The player might have already accepted or declined the swap. Error: {e}"

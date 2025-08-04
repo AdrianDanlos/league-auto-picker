@@ -1,9 +1,19 @@
 import requests
 from urllib.parse import quote
-from features.send_discord_error_message import log_and_discord
+from utils.logger import log_and_discord
 from utils import get_gameflow_phase, get_rank_data
+from utils import get_assigned_lane, get_region, get_queueType, get_summoner_name
 
 webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoymtnU4o9br3grXkV4HJIl2WYtTAY6BQ2__D5MyAbZqpv-FsW3lEKjPcAN2"
+
+# Global variable to store the data for discord's message
+game_data = {
+    "picked_champion": None,
+    "summoner_name": None,
+    "assigned_lane": None,
+    "region": None,
+    "queueType": None,
+}
 
 
 def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
@@ -64,12 +74,12 @@ def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
         )
 
 
-def send_discord_pre_game_message(base_url, auth, game_data):
+def send_discord_pre_game_message(game_data):
     try:
         tier, division, wins, loses, lp = get_rank_data(
-            base_url, auth, game_data.get("queueType", "Unknown")
+            game_data.get("queueType", "Unknown")
         ).values()
-        gameflow_phase = get_gameflow_phase(base_url, auth)
+        gameflow_phase = get_gameflow_phase()
         print("🟡 gameflow_phase before sending dc message: ", gameflow_phase)
         if gameflow_phase == "InProgress":
             summoner_name = quote(game_data.get("summoner_name", "Unknown"))
@@ -124,3 +134,19 @@ def build_opgg_url(region, summoner_name):
     if region == "sa1":
         region_converted = "sea"
     return f"https://op.gg/lol/summoners/{region_converted}/{summoner_name}/ingame"
+
+
+def create_discord_message(best_pick, session):
+    """Create Discord message data for the picked champion."""
+    # Make the variable accessible to the entrypoint
+    global game_data
+    game_data["picked_champion"] = best_pick
+    game_data["summoner_name"] = get_summoner_name(session)
+    game_data["assigned_lane"] = get_assigned_lane(session)
+    game_data["region"] = get_region(session)
+    game_data["queueType"] = get_queueType(session)
+
+
+def get_game_data():
+    """Get the current game data for Discord messaging."""
+    return game_data

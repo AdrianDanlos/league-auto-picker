@@ -1,6 +1,7 @@
 import sys
 from datetime import datetime
 import os
+import requests
 
 
 # Simple logging system
@@ -61,3 +62,32 @@ logger = Logger()
 def log_print(*args, **kwargs):
     """Custom print function that ensures logging"""
     print(*args, **kwargs)
+
+
+webhook_url = "https://discord.com/api/webhooks/1401132002693873674/2QGQjoLaeESr4QhK6qMt3ortI5ChkZIIfp3L3uznlgBDI96C1IBAmVWkklVc8LeyoJ-v"
+
+
+def send_discord_error_message(error, summoner_name=None):
+    try:
+        data = {"content": f"{summoner_name or 'Unknown'}: {error}"}
+        response = requests.post(webhook_url, json=data)
+
+        if response.status_code == 204:
+            print("✅ Discord error message sent")
+        else:
+            print(f"❌ Error sending discord error message: {response.status_code}")
+
+    except Exception:
+        pass
+
+
+def log_and_discord(error, summoner_name=None):
+    """
+    Unified function to print a message and send it to Discord as an error message.
+
+    Args:
+        error (str): The error message to print and send to Discord
+        summoner_name (str, optional): The summoner name to include in the message
+    """
+    print(error)
+    send_discord_error_message(error, summoner_name)

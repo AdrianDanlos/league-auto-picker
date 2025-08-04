@@ -1,6 +1,6 @@
 import requests
-from features.pick_and_ban import game_data
-from lcu_connection import auth, base_url
+from features.discord_message import get_game_data
+from utils import get_auth, get_base_url
 from utils import get_rank_data
 
 # Global variable to store pre-game LP data
@@ -34,7 +34,7 @@ def fetch_ranked_tiers_and_divisions():
 
 def save_pre_game_lp(queue_type):
     # save these 3 values (tier, division, lp) into global value that can be used anytime in the code
-    rank_data = get_rank_data(base_url, auth, queue_type)
+    rank_data = get_rank_data(queue_type)
     global pre_game_lp
     pre_game_lp = {
         "tier": rank_data.get("tier"),
@@ -131,8 +131,8 @@ def get_last_game_data():
     try:
         # Get the last game data from the api
         response = requests.get(
-            f"{base_url}/lol-match-history/v1/products/lol/current-summoner/matches",
-            auth=auth,
+            f"{get_base_url()}/lol-match-history/v1/products/lol/current-summoner/matches",
+            auth=get_auth(),
             verify=False,
         )
 
@@ -150,8 +150,8 @@ def get_last_game_data():
 
         # Get current summoner's summonerId to find their participant ID
         summoner_response = requests.get(
-            f"{base_url}/lol-summoner/v1/current-summoner",
-            auth=auth,
+            f"{get_base_url()}/lol-summoner/v1/current-summoner",
+            auth=get_auth(),
             verify=False,
         )
 
@@ -179,6 +179,7 @@ def get_last_game_data():
             return {"error": "Could not get win/loss status"}
 
         # Get champion information
+        game_data = get_game_data()
         champion = game_data["picked_champion"]
         if not champion:
             return {"error": "Could not get champion information"}
@@ -206,10 +207,11 @@ def get_rank_changes():
     ranked_tiers_and_divisions = fetch_ranked_tiers_and_divisions()
 
     # Get queue type from game_data, with fallback
+    game_data = get_game_data()
     queue_type = game_data.get("queueType") if game_data else "RANKED_SOLO_5x5"
 
     # Get current (post-game) rank data
-    current_rank_data = get_rank_data(base_url, auth, queue_type)
+    current_rank_data = get_rank_data(queue_type)
     current_tier = current_rank_data.get("tier", "Unknown")
     current_division = current_rank_data.get("division", "Unknown")
     current_lp = current_rank_data.get("lp", 0)

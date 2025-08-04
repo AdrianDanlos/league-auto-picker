@@ -176,3 +176,23 @@ You can test the LP tracking functionality with:
 ```
 py test_lp_tracker.py
 ```
+
+## Debug Tips
+
+### 1. Session Data Structure
+
+In case we don't know what the data structure looks like, output the whole session:
+
+```python
+import json
+print(f"Session data: {json.dumps(session_data, indent=2)}")
+```
+
+### 2. Traceback Debugging
+
+For debugging purposes, use this to get full traceback information:
+
+```python
+import traceback
+print(f"⚠️ Full traceback: {traceback.format_exc()}")
+```

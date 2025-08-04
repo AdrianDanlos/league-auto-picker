@@ -4,10 +4,11 @@ import json
 import threading
 import datetime
 
-from features.send_discord_error_message import log_and_discord
+from utils.logger import log_and_discord
+from utils import get_auth, get_base_url
 
 
-def send_champ_select_message(session, base_url, auth):
+def send_champ_select_message(session):
     # Load messages from config file
     with open("config.json", "r") as f:
         config = json.load(f)
@@ -31,8 +32,8 @@ def send_champ_select_message(session, base_url, auth):
     elif "chatId" in session:
         chat_id = session["chatId"]
     if chat_id:
-        url = f"{base_url}/lol-chat/v1/conversations/{chat_id}/messages"
-        res = requests.post(url, json={"body": message}, auth=auth, verify=False)
+        url = f"{get_base_url()}/lol-chat/v1/conversations/{chat_id}/messages"
+        res = requests.post(url, json={"body": message}, auth=get_auth(), verify=False)
         if res.status_code == 200:
             print(f"[Chat] Sent message: {message}")
         else:
@@ -43,19 +44,15 @@ def send_champ_select_message(session, base_url, auth):
         )
 
 
-def schedule_champ_select_message(session, base_url, auth, delay=20):
+def schedule_champ_select_message(session, delay=20):
     """
     Schedule the champ select message to be sent after a delay without blocking the main thread.
 
     Args:
         session: The session object
-        base_url: The base URL for the API
-        auth: Authentication credentials
         delay: Delay in seconds before sending the message (default: 20)
     """
-    timer = threading.Timer(
-        delay, send_champ_select_message, args=(session, base_url, auth)
-    )
+    timer = threading.Timer(delay, send_champ_select_message, args=(session,))
     timer.start()
     print(f"[Chat] Scheduled message to be sent in {delay} seconds")
     return timer

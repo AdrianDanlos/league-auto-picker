@@ -1,18 +1,19 @@
 import requests
 import time
 
-from features.send_discord_error_message import log_and_discord
-from lcu_connection import get_session
+from utils.logger import log_and_discord
+from utils import get_auth, get_base_url, get_session
 
 
-def accept_queue(base_url, auth):
+def accept_queue():
     """Polls the ready-check endpoint and accepts the match if found."""
     last_state = None
-    print("Welcome to League!")
     while True:
         try:
             r = requests.get(
-                f"{base_url}/lol-matchmaking/v1/ready-check", auth=auth, verify=False
+                f"{get_base_url()}/lol-matchmaking/v1/ready-check",
+                auth=get_auth(),
+                verify=False,
             )
             if r.status_code == 200:
                 data = r.json()
@@ -35,8 +36,8 @@ def accept_queue(base_url, auth):
 
                 if state == "InProgress":
                     accept = requests.post(
-                        f"{base_url}/lol-matchmaking/v1/ready-check/accept",
-                        auth=auth,
+                        f"{get_base_url()}/lol-matchmaking/v1/ready-check/accept",
+                        auth=get_auth(),
                         verify=False,
                     )
 
@@ -53,14 +54,14 @@ def accept_queue(base_url, auth):
                         time.sleep(1)
 
                         # Check if champ select has started
-                        if get_session(base_url, auth):
+                        if get_session():
                             print("🎮 Champion select started!")
                             return
 
                         # Re-check queue state
                         r = requests.get(
-                            f"{base_url}/lol-matchmaking/v1/ready-check",
-                            auth=auth,
+                            f"{get_base_url()}/lol-matchmaking/v1/ready-check",
+                            auth=get_auth(),
                             verify=False,
                         )
                         if r.status_code == 200:
@@ -82,5 +83,5 @@ def accept_queue(base_url, auth):
 
             time.sleep(1)
         except Exception as e:
-            log_and_discord(f"[Queue Accept Error]: {e}")
+            print(f"[Queue Accept Error]: {e}")
             time.sleep(5)

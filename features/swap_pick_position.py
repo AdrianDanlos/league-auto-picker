@@ -1,7 +1,7 @@
 import requests
 import time
-from features.send_discord_error_message import log_and_discord
-from lcu_connection import get_session
+from utils.logger import log_and_discord
+from utils import get_auth, get_base_url, get_session
 
 
 def get_pick_order(session, cell_id):
@@ -20,17 +20,13 @@ def get_pick_order(session, cell_id):
     return None
 
 
-def swap_pick_position(base_url, auth):
+def swap_pick_position():
     """
     Automatically requests pick order swaps to move to the 5th pick position.
 
     This function continuously attempts to swap pick positions until the user reaches
     the 5th pick position. It intelligently handles ongoing swaps and manages
     swap requests to ensure smooth operation.
-
-    Args:
-        base_url (str): The base URL for the League Client API
-        auth (tuple): Authentication credentials for the API requests
 
     Returns:
         None: Function returns None in all cases (void function)
@@ -62,12 +58,12 @@ def swap_pick_position(base_url, auth):
         - Prioritizes targets with higher pick orders for more efficient swapping
     """
     # Check if session is undefined or None (Someone dodged)
-    if not get_session(base_url, auth):
+    if not get_session():
         return
 
     while True:
         try:
-            session = get_session(base_url, auth)
+            session = get_session()
             # Check if session is None (someone dodged)
             if session is None:
                 print(
@@ -96,10 +92,10 @@ def swap_pick_position(base_url, auth):
             while wait_count < 10:  # Wait up to 30 seconds
                 try:
                     ongoing_swap_url = (
-                        f"{base_url}/lol-champ-select/v1/ongoing-pick-order-swap"
+                        f"{get_base_url()}/lol-champ-select/v1/ongoing-pick-order-swap"
                     )
                     ongoing_res = requests.get(
-                        ongoing_swap_url, auth=auth, verify=False
+                        ongoing_swap_url, auth=get_auth(), verify=False
                     )
                     if ongoing_res.status_code == 200:
                         ongoing_swap = ongoing_res.json()
@@ -126,7 +122,7 @@ def swap_pick_position(base_url, auth):
 
             # 2. Re-fetch session and get your pick order
             try:
-                session = get_session(base_url, auth)
+                session = get_session()
                 # Check if session is None (someone dodged)
                 if session is None:
                     print(
@@ -188,9 +184,9 @@ def swap_pick_position(base_url, auth):
                 continue
 
             # 7. Make the swap request
-            url = f"{base_url}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/request"
+            url = f"{get_base_url()}/lol-champ-select/v1/session/pick-order-swaps/{swap_id}/request"
             try:
-                res = requests.post(url, auth=auth, verify=False)
+                res = requests.post(url, auth=get_auth(), verify=False)
                 if (
                     res.status_code == 200
                     and res.text

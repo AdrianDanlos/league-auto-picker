@@ -1,13 +1,14 @@
 import requests
 
-from features.send_discord_error_message import log_and_discord
+from .logger import log_and_discord
+from .lcu_connection import get_auth, get_base_url
 
 
-def get_rank_data(base_url, auth, queueType):
+def get_rank_data(queueType):
     try:
         response = requests.get(
-            f"{base_url}/lol-ranked/v1/current-ranked-stats",
-            auth=auth,
+            f"{get_base_url()}/lol-ranked/v1/current-ranked-stats",
+            auth=get_auth(),
             verify=False,
         )
 
@@ -44,11 +45,11 @@ def get_rank_data(base_url, auth, queueType):
         }
 
 
-def get_gameflow_phase(base_url, auth):
+def get_gameflow_phase():
     try:
         response = requests.get(
-            f"{base_url}/lol-gameflow/v1/gameflow-phase",
-            auth=auth,
+            f"{get_base_url()}/lol-gameflow/v1/gameflow-phase",
+            auth=get_auth(),
             verify=False,
         )
 
@@ -62,5 +63,5 @@ def get_gameflow_phase(base_url, auth):
             return None
 
     except Exception as e:
-        log_and_discord(f"❌ Unexpected error getting gameflow phase: {e}")
+        print(f"❌ Unexpected error getting gameflow phase: {e}")
         return None

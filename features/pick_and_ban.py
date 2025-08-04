@@ -1,253 +1,30 @@
-import requests
 import time
-import random
 
-from constants import FLEX_CODE, SOLOQ_CODE
+from constants import PICK_TIME_LEFT_MS
 from features.select_default_runes_and_summs import (
     select_default_runes,
     select_summoner_spells,
 )
-from features.send_discord_error_message import log_and_discord
-from lcu_connection import get_session
-from features.summoner_utils import get_summoner_name
-
-# Global variable to store the data for discord's message
-game_data = {
-    "picked_champion": None,
-    "summoner_name": None,
-    "assigned_lane": None,
-    "region": None,
-    "queueType": None,
-}
-
-
-# === Champion name -> ID map (fetched dynamically from Data Dragon) ===
-def fetch_champion_ids():
-    version = requests.get(
-        "https://ddragon.leagueoflegends.com/api/versions.json"
-    ).json()[0]
-    champ_data = requests.get(
-        f"https://ddragon.leagueoflegends.com/cdn/{version}/data/en_US/champion.json"
-    ).json()
-    return {champ["name"]: int(champ["key"]) for champ in champ_data["data"].values()}
+from utils.logger import log_and_discord
+from utils import get_session
+from utils import (
+    fetch_champion_ids,
+    fetch_champion_names,
+    is_champion_locked_in,
+    get_locked_in_champion,
+)
+from utils import (
+    get_assigned_lane,
+    get_enemy_champions,
+    get_banned_champion_ids,
+    is_still_our_turn_to_pick,
+)
+from features.select_champion_logic import find_best_counter_pick, select_default_pick
+from features.execute_pick_ban import execute_ban, execute_pick
+from features.discord_message import create_discord_message
 
 
-def fetch_champion_names():
-    version = requests.get(
-        "https://ddragon.leagueoflegends.com/api/versions.json"
-    ).json()[0]
-    champ_data = requests.get(
-        f"https://ddragon.leagueoflegends.com/cdn/{version}/data/en_US/champion.json"
-    ).json()
-    return {int(champ["key"]): champ["name"] for champ in champ_data["data"].values()}
-
-
-def get_assigned_lane(session):
-    my_cell_id = session.get("localPlayerCellId")
-    for participant in session.get("myTeam", []):
-        if participant.get("cellId") == my_cell_id:
-            return participant.get("assignedPosition")
-    return None
-
-
-def get_enemy_champions(session, champion_ids):
-    enemy_champions = []
-    their_team = session.get("theirTeam", [])
-
-    for participant in their_team:
-        # Check if they have picked a champion
-        if participant.get("championId") and participant.get("championId") != 0:
-            # Convert champion ID to name
-            champion_name = get_champion_name_by_id(
-                participant.get("championId"), champion_ids
-            )
-            if champion_name:
-                enemy_champions.append(champion_name)
-
-    return enemy_champions
-
-
-def get_banned_champion_ids(session):
-    banned_champs = [
-        action["championId"]
-        for phase in session["actions"]
-        for action in phase
-        if action["type"] == "ban" and action["completed"]
-    ]
-
-    return banned_champs
-
-
-def is_champion_available(
-    champion_name,
-    ally_champion_ids,
-    banned_champions_ids,
-    enemy_champions,
-    champion_ids,
-):
-    try:
-        champion_id = champion_ids.get(champion_name)
-
-        # Check if champion exists in our ID mapping
-        if not champion_id:
-            return False
-
-        # Check if champion is picked by teammates
-        if champion_id in ally_champion_ids:
-            return False
-
-        # Check if champion is banned
-        if champion_id in banned_champions_ids:
-            return False
-
-        # Check if champion is picked by enemies
-        if champion_name in enemy_champions:
-            return False
-
-        return True
-    except Exception as e:
-        log_and_discord(f"⚠️ Error in is_champion_available for {champion_name}: {e}")
-        return False
-
-
-def get_champion_name_by_id(champion_id, champion_ids):
-    """Convert champion ID to name using the reverse mapping from champion_ids."""
-    # Create reverse mapping from the existing champion_ids dict
-    id_to_name = {v: k for k, v in champion_ids.items()}
-    return id_to_name.get(champion_id)
-
-
-def find_best_counter_pick(
-    enemy_champions,
-    lane_picks_config,
-    ally_champion_ids,
-    banned_champions_ids,
-    champion_ids,
-):
-    if not enemy_champions:
-        log_and_discord("🔍 Debug: No enemy champions found")
-        return None
-
-    print(
-        f"🔍 Debug: Starting counter-pick search with {len(enemy_champions)} enemy champions"
-    )
-    print(f"🔍 Debug: Lane picks config keys: {list(lane_picks_config.keys())}")
-
-    best_pick = None
-    earliest_position = float("inf")
-
-    # Check each enemy champion
-    for enemy_champ in enemy_champions:
-        print(f"🔍 Debug: Checking enemy champion: {enemy_champ}")
-        # Search through all lane configs to find which champion has this enemy as a counter
-        try:
-            found_counter = False
-            for counter_champ, counter_list in lane_picks_config.items():
-                if enemy_champ in counter_list:
-                    found_counter = True
-                    print(
-                        f"🔍 Debug: Found {enemy_champ} in counter list for {counter_champ}"
-                    )
-                    # Found the enemy champion in this counter list
-                    enemy_index = counter_list.index(enemy_champ)
-
-                    try:
-                        if not is_champion_available(
-                            counter_champ,
-                            ally_champion_ids,
-                            banned_champions_ids,
-                            enemy_champions,
-                            champion_ids,
-                        ):
-                            print(
-                                f"🔍 Debug: Skipping {counter_champ} - not available (prepicked, banned, or picked by enemies)"
-                            )
-                            continue
-
-                        # Check if any matchups are even more favorable
-                        if enemy_index < earliest_position:
-                            print(
-                                f"🔍 Debug: New best pick found! {counter_champ} (enemy at position {enemy_index})"
-                            )
-                            best_pick = counter_champ
-                            earliest_position = enemy_index
-                    except Exception as e:
-                        log_and_discord(
-                            f"⚠️ Error in is_champion_available for {counter_champ}: {e}"
-                        )
-                        continue
-
-            if not found_counter:
-                print(f"🔍 Debug: No counter found for enemy champion: {enemy_champ}")
-
-        except Exception as e:
-            log_and_discord(
-                f"⚠️ Error in counter-pick iteration: {e}\n ⚠️ Lane picks config: {lane_picks_config}"
-            )
-            return None
-
-    print(f"🔍 Debug: Final best pick: {best_pick}")
-    return best_pick
-
-
-def get_region(session):
-    return session["chatDetails"]["mucJwtDto"].get("targetRegion")
-
-
-def create_discord_message(best_pick, session):
-    # Make the variable accesible to the entrypoint
-    global game_data
-    game_data["picked_champion"] = best_pick
-    game_data["summoner_name"] = get_summoner_name(session)
-    game_data["assigned_lane"] = get_assigned_lane(session)
-    game_data["region"] = get_region(session)
-    game_data["queueType"] = get_queueType(session)
-
-
-def get_queueType(session):
-    queue_type = session.get("queueId", 0)
-    if queue_type == SOLOQ_CODE:
-        return "RANKED_SOLO_5x5"
-    elif queue_type == FLEX_CODE:
-        return "RANKED_FLEX_SR"
-
-
-def is_champion_locked_in(base_url, auth):
-    session = get_session(base_url, auth)
-    my_id = session["localPlayerCellId"]
-    for actions in session["actions"]:
-        for a in actions:
-            if a.get("actorCellId") == my_id and a.get("type") == "pick":
-                return a.get("completed", False)
-    return False
-
-
-def get_locked_in_champion(base_url, auth):
-    session = get_session(base_url, auth)
-    my_id = session["localPlayerCellId"]
-    for actions in session["actions"]:
-        for a in actions:
-            if a.get("actorCellId") == my_id and a.get("type") == "pick":
-                return a.get("championId", 0)
-    return None
-
-
-def is_still_our_turn_to_pick(session, my_cell_id):
-    actions = session.get("actions", [])
-
-    for action_group in actions:
-        for action in action_group:
-            if (
-                action["actorCellId"] == my_cell_id
-                and action["isInProgress"]
-                and action["type"] == "pick"
-            ):
-                return True
-
-    return False
-
-
-def pick_and_ban(base_url, auth, config):
+def pick_and_ban(config):
     """
     Continuously monitors the League of Legends champion select session and automates the pick and ban process.
 
@@ -287,8 +64,6 @@ def pick_and_ban(base_url, auth, config):
     - Gracefully handles API errors and invalid session states
 
     Args:
-        base_url (str): The base URL for the League Client API (e.g., "https://127.0.0.1:2999")
-        auth (tuple): Authentication tuple containing (username, password) for API access
         config (dict): Configuration dictionary with the following structure:
             - picks (dict): Lane-specific pick configurations
                 - LANE (str): Dictionary mapping champion names to counter lists
@@ -305,7 +80,7 @@ def pick_and_ban(base_url, auth, config):
 
     while True:
         try:
-            session = get_session(base_url, auth)
+            session = get_session()
 
             # Check if session is undefined or None
             if not session:
@@ -362,22 +137,7 @@ def pick_and_ban(base_url, auth, config):
                             champ = config["bans"].get(lane_key, None)
                             champ_id = CHAMPION_IDS.get(champ)
                             if champ_id:
-                                res = requests.patch(
-                                    f"{base_url}/lol-champ-select/v1/session/actions/"
-                                    f"{action['id']}",
-                                    json={
-                                        "championId": champ_id,
-                                        "completed": True,
-                                    },
-                                    auth=auth,
-                                    verify=False,
-                                )
-                                if res.status_code == 204:
-                                    print(f"✅ Banned {champ}!")
-                                else:
-                                    log_and_discord(
-                                        f"❌ Failed to ban {champ}: {res.status_code}"
-                                    )
+                                execute_ban(action, champ, champ_id)
 
                         elif action["type"] == "pick":
                             print(
@@ -389,18 +149,18 @@ def pick_and_ban(base_url, auth, config):
                             )
 
                             # Calculate sleep time, ensuring it's not negative
-                            sleep_time = max(0, (timeLeftToPickMilis - 5000) / 1000)
+                            sleep_time = max(
+                                0, (timeLeftToPickMilis - PICK_TIME_LEFT_MS) / 1000
+                            )
 
-                            # Pick when there is 5 seconds left (5000ms)
+                            # Pick when there is 5 seconds left (5000ms) - PICK_TIME_LEFT_MS
                             if sleep_time > 0:
                                 time.sleep(sleep_time)
 
                             # Check if already locked in before waiting
-                            if is_champion_locked_in(base_url, auth):
+                            if is_champion_locked_in():
                                 CHAMPION_NAMES = fetch_champion_names()
-                                locked_in_champion_id = get_locked_in_champion(
-                                    base_url, auth
-                                )
+                                locked_in_champion_id = get_locked_in_champion()
                                 champion_name = CHAMPION_NAMES.get(
                                     locked_in_champion_id
                                 )
@@ -411,7 +171,7 @@ def pick_and_ban(base_url, auth, config):
                                 return
 
                             # Re check if its still our turn, we might have switched pick positions on our turn to pick
-                            session = get_session(base_url, auth)
+                            session = get_session()
                             is_our_turn = is_still_our_turn_to_pick(session, my_cell_id)
                             if not is_our_turn:
                                 break
@@ -447,59 +207,26 @@ def pick_and_ban(base_url, auth, config):
 
                             # If no counter-pick found, use DEFAULT
                             if not best_pick:
-                                print("No counter pick found")
-                                mode = (
-                                    "RANDOM_MODE"
-                                    if config.get("random_mode_active", False)
-                                    else "DEFAULT"
+                                best_pick = select_default_pick(
+                                    config,
+                                    lane_key,
+                                    ally_champion_ids,
+                                    banned_champions_ids,
+                                    enemy_champions,
+                                    CHAMPION_IDS,
                                 )
-                                default_picks = (
-                                    config["picks"].get(mode, {}).get(lane_key, [])
-                                )
-                                if default_picks:
-                                    # Filter available default picks (not prepicked by teammates)
-                                    available_defaults = []
-                                    for default_champ in default_picks:
-                                        if is_champion_available(
-                                            default_champ,
-                                            ally_champion_ids,
-                                            banned_champions_ids,
-                                            enemy_champions,
-                                            CHAMPION_IDS,
-                                        ):
-                                            available_defaults.append(default_champ)
-
-                                    if available_defaults:
-                                        if mode == "DEFAULT":
-                                            best_pick = available_defaults[0]
-                                        else:
-                                            best_pick = random.choice(
-                                                available_defaults
-                                            )
 
                             if best_pick:
                                 print(f"🔍 Debug: Picking {best_pick}")
                                 champ_id = CHAMPION_IDS.get(best_pick)
                                 print(f"🔍 Debug: Champ ID: {champ_id}")
-                                res = requests.patch(
-                                    f"{base_url}/lol-champ-select/v1/session/actions/"
-                                    f"{action['id']}",
-                                    json={"championId": champ_id, "completed": True},
-                                    auth=auth,
-                                    verify=False,
-                                )
-                                if res.status_code == 204:
-                                    print(f"✅ Picked {best_pick}!")
+                                if execute_pick(action, best_pick, champ_id):
                                     create_discord_message(best_pick, session)
-                                    select_default_runes(base_url, auth)
+                                    select_default_runes()
                                     select_summoner_spells(
-                                        base_url, auth, config, best_pick, assigned_lane
+                                        config, best_pick, assigned_lane
                                     )
                                     break
-                                else:
-                                    log_and_discord(
-                                        f"❌ Failed to pick {best_pick}: {res.status_code}"
-                                    )
                             else:
                                 log_and_discord(
                                     "❌ No suitable champion found to pick."
