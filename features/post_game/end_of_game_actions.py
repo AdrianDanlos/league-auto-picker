@@ -9,8 +9,11 @@ from features.discord_message import (
 
 def start_end_of_game_actions():
     while True:
+        message_sent = False
         gameflow_phase = get_gameflow_phase()
-        if gameflow_phase == "EndOfGame":
+        if gameflow_phase == "EndOfGame" and not message_sent:
+            print("🟡 END OF GAME gameflow_phase", gameflow_phase)
+            message_sent = True
             game_data = get_game_data()
             send_discord_post_game_message(
                 get_last_game_data(), get_rank_changes(), game_data["summoner_name"]
