@@ -15,5 +15,4 @@ def start_end_of_game_actions():
             send_discord_post_game_message(
                 get_last_game_data(), get_rank_changes(), game_data["summoner_name"]
             )
-            break
         time.sleep(3)
