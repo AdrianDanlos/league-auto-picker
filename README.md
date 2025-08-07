@@ -31,11 +31,21 @@ League Auto Picker is an automation utility programm designed to enhance the Lea
    pip install -r requirements.txt
    ```
 
-## **Run the script**
-   ```
-   py .\entrypoint.py
-   ```
-## TODO: ADD STUFF HERE
+## Setup config file with your own preferences
+
+For reference check the `config.example.json` file. Once you have updated it rename it to `config.json` and you are ready to go.
+
+More information about the `config.json` file:
+
+**Picks Section**: The bot follows this priority order when picking champions: 
+1) First, it checks if any enemy picked a champion you have a counter for and selects your counter pick (if multiple champions can counter the same enemy, it picks the one where that enemy appears earliest in your counter list) 
+2) If no counters apply, it picks from your "DEFAULT" list for that role (Useful when you always want to pick a specific champion in case we are blindpicking) 
+3) If "random_mode_active" is true, it randomly selects from your "RANDOM_MODE" pool instead of using the first default champion. (Useful to be able to play a variety of champions whenever we are blindpicking)
+
+**Summoner spells**: You can set default summoner spells for each role, and override them by specifying champion-specific summoner spells for that role.
+
+**Messages**: You can define multiple messages and the bot will randomly select one to send whenever the champ select starts. If the messages are empty it will by default send the message: 'hey happy friday' (in case today is friday)
+
 ## Summoner Spell IDs
 
 Common summoner spell IDs:
@@ -49,9 +59,15 @@ Common summoner spell IDs:
 - Smite: `11`
 - Ghost: `6`
 
+## **Run the script**
+
+```
+py .\entrypoint.py
+```
+
 ## Logging System
 
-The application includes a simple logging system that automatically redirects all console output to a log file. 
+The application includes a simple logging system that automatically redirects all console output to a log file.
 
 ## Debug Tips
 
