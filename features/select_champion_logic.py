@@ -12,7 +12,7 @@ def find_best_counter_pick(
 ):
     """Find the best counter-pick based on enemy champions."""
     if not enemy_champions:
-        log_and_discord("🔍 Debug: No enemy champions found")
+        log_and_discord("No enemy champions found")
         return None
 
     best_pick = None
@@ -20,7 +20,7 @@ def find_best_counter_pick(
 
     # Check each enemy champion
     for enemy_champ in enemy_champions:
-        print(f"🔍 Debug: Checking enemy champion: {enemy_champ}")
+        print(f"Checking enemy champion: {enemy_champ}")
         # Search through all lane configs to find which champion has this enemy as a counter
         try:
             found_counter = False
@@ -28,7 +28,7 @@ def find_best_counter_pick(
                 if enemy_champ in counter_list:
                     found_counter = True
                     print(
-                        f"🔍 Debug: Found {enemy_champ} in counter list for {counter_champ}"
+                        f"Found {enemy_champ} in counter list for {counter_champ}"
                     )
                     # Found the enemy champion in this counter list
                     enemy_index = counter_list.index(enemy_champ)
@@ -42,14 +42,14 @@ def find_best_counter_pick(
                             champion_ids,
                         ):
                             print(
-                                f"🔍 Debug: Skipping {counter_champ} - not available (prepicked, banned, or picked by enemies)"
+                                f"Skipping {counter_champ} - not available (prepicked, banned, or picked by enemies)"
                             )
                             continue
 
                         # Check if any matchups are even more favorable
                         if enemy_index < earliest_position:
                             print(
-                                f"🔍 Debug: New best pick found! {counter_champ} (enemy at position {enemy_index})"
+                                f"New best pick found! {counter_champ} (enemy at position {enemy_index})"
                             )
                             best_pick = counter_champ
                             earliest_position = enemy_index
@@ -60,7 +60,7 @@ def find_best_counter_pick(
                         continue
 
             if not found_counter:
-                print(f"🔍 Debug: No counter found for enemy champion: {enemy_champ}")
+                print(f"No counter found for enemy champion: {enemy_champ}")
 
         except Exception as e:
             log_and_discord(
@@ -68,7 +68,7 @@ def find_best_counter_pick(
             )
             return None
 
-    print(f"🔍 Debug: Final best pick: {best_pick}")
+    print(f"Final best pick: {best_pick}")
     return best_pick
 
 
