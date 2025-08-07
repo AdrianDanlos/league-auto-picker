@@ -185,14 +185,6 @@ def pick_and_ban(config):
 
                                 banned_champions_ids = get_banned_champion_ids(session)
 
-                                print(f"🔍 Debug: Enemy champions: {enemy_champions}")
-                                print(
-                                    f"🔍 Debug: Banned champions: {banned_champions_ids}"
-                                )
-                                print(
-                                    f"🔍 Debug: ally_champion_ids: {ally_champion_ids}"
-                                )
-
                                 best_pick = find_best_counter_pick(
                                     enemy_champions,
                                     lane_picks_config,
@@ -217,9 +209,8 @@ def pick_and_ban(config):
                                 )
 
                             if best_pick:
-                                print(f"🔍 Debug: Picking {best_pick}")
+                                print(f"Picking {best_pick}")
                                 champ_id = CHAMPION_IDS.get(best_pick)
-                                print(f"🔍 Debug: Champ ID: {champ_id}")
                                 if execute_pick(action, best_pick, champ_id):
                                     create_discord_message(best_pick, session)
                                     select_default_runes()

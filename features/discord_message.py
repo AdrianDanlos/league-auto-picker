@@ -18,9 +18,6 @@ game_data = {
 
 def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
     try:
-        print("🟡 last_game_data: ", last_game_data)
-        print("🟡 rank_changes: ", rank_changes)
-
         # Extract data from last_game_data
         win_loss = last_game_data.get("win_loss", {})
         champion = last_game_data.get("champion", {})
@@ -80,7 +77,7 @@ def send_discord_pre_game_message(game_data):
             game_data.get("queueType", "Unknown")
         ).values()
         gameflow_phase = get_gameflow_phase()
-        print("🟡 gameflow_phase before sending dc message: ", gameflow_phase)
+
         if gameflow_phase == "InProgress":
             summoner_name = quote(game_data.get("summoner_name", "Unknown"))
             region = game_data.get("region", "Unknown")

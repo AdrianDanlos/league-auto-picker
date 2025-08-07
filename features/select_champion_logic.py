@@ -15,11 +15,6 @@ def find_best_counter_pick(
         log_and_discord("🔍 Debug: No enemy champions found")
         return None
 
-    print(
-        f"🔍 Debug: Starting counter-pick search with {len(enemy_champions)} enemy champions"
-    )
-    print(f"🔍 Debug: Lane picks config keys: {list(lane_picks_config.keys())}")
-
     best_pick = None
     earliest_position = float("inf")
 

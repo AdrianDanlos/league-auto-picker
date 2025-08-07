@@ -83,7 +83,7 @@ def decline_incoming_swap_requests():
 
                 try:
                     time.sleep(
-                        2
+                        1.5
                     )  # allow the player to accept or decline the swap before automatically declining it
                     decline_res = requests.post(
                         decline_url, auth=get_auth(), verify=False

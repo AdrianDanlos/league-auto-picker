@@ -41,7 +41,6 @@ def save_pre_game_lp(queue_type):
         "division": rank_data.get("division"),
         "lp": rank_data.get("lp"),
     }
-    print("🟡 pre_game_lp: ", pre_game_lp)
 
 
 def get_win_loss_status(latest_game, participant_id):
