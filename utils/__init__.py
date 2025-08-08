@@ -30,6 +30,7 @@ from .champion_utils import (
     get_locked_in_champion,
 )
 from .logger import log_and_discord, send_discord_error_message
+from . import shared_state
 
 __all__ = [
     # LCU Connection
@@ -58,4 +59,6 @@ __all__ = [
     # Logging utilities
     "log_and_discord",
     "send_discord_error_message",
+    # Shared state
+    "shared_state",
 ]

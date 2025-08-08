@@ -3,17 +3,9 @@ from urllib.parse import quote
 from utils.logger import log_and_discord
 from utils import get_gameflow_phase, get_rank_data
 from utils import get_assigned_lane, get_region, get_queueType, get_summoner_name
+from utils import shared_state
 
 webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoymtnU4o9br3grXkV4HJIl2WYtTAY6BQ2__D5MyAbZqpv-FsW3lEKjPcAN2"
-
-# Global variable to store the data for discord's message
-game_data = {
-    "picked_champion": None,
-    "summoner_name": None,
-    "assigned_lane": None,
-    "region": None,
-    "queueType": None,
-}
 
 
 def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
@@ -136,14 +128,13 @@ def build_opgg_url(region, summoner_name):
 def create_discord_message(best_pick, session):
     """Create Discord message data for the picked champion."""
     # Make the variable accessible to the entrypoint
-    global game_data
-    game_data["picked_champion"] = best_pick
-    game_data["summoner_name"] = get_summoner_name(session)
-    game_data["assigned_lane"] = get_assigned_lane(session)
-    game_data["region"] = get_region(session)
-    game_data["queueType"] = get_queueType(session)
+    shared_state.game_data["picked_champion"] = best_pick
+    shared_state.game_data["summoner_name"] = get_summoner_name(session)
+    shared_state.game_data["assigned_lane"] = get_assigned_lane(session)
+    shared_state.game_data["region"] = get_region(session)
+    shared_state.game_data["queueType"] = get_queueType(session)
 
 
 def get_game_data():
     """Get the current game data for Discord messaging."""
-    return game_data
+    return shared_state.game_data

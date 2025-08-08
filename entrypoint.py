@@ -18,12 +18,11 @@ from features.send_chat_message import schedule_champ_select_message
 from features.post_game.post_game_utils import save_pre_game_lp
 from utils import get_base_url, get_auth, get_session, get_queueType
 from utils.logger import logger
+from utils import shared_state
 
 # Disable warnings for self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Global variable to store current queue type
-current_queue_type = None
 
 # === Load config ===
 try:
@@ -106,13 +105,12 @@ def main():
                 session = wait_for_champ_select()
 
                 # Save LP before game starts
-                global current_queue_type
-                current_queue_type = get_queueType(session)
-                if not current_queue_type:
+                shared_state.current_queue_type = get_queueType(session)
+                if not shared_state.current_queue_type:
                     # Skip current iteration of loop. The queue is not a ranked queue.
                     continue
 
-                save_pre_game_lp(current_queue_type)
+                save_pre_game_lp(shared_state.current_queue_type)
 
                 schedule_champ_select_message(session)
                 swap_role(session, config)
