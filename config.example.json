@@ -1,10 +1,10 @@
 {
   "bans": {
-    "TOP": "Dr. Mundo",
-    "JUNGLE": "Master Yi",
-    "MIDDLE": "Hwei",
-    "BOTTOM": "Kaisa",
-    "UTILITY": "Rell"
+    "TOP": ["Dr. Mundo"],
+    "JUNGLE": ["Master Yi"],
+    "MIDDLE": ["Hwei", "Jayce"],
+    "BOTTOM": ["Kaisa"],
+    "UTILITY": ["Rell"]
   },
   "picks": {
     "TOP": {
