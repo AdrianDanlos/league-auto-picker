@@ -22,6 +22,9 @@ from utils.logger import logger
 # Disable warnings for self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# Global variable to store current queue type
+current_queue_type = None
+
 # === Load config ===
 try:
     with open("config.json") as f:
@@ -91,12 +94,11 @@ def main():
     print("✅ Connected to League client successfully!")
 
     try:
-        # Start end of game actions in a separate thread
+        # Start end of game actions in a single long-lived thread
         end_of_game_thread = threading.Thread(target=start_end_of_game_actions)
         end_of_game_thread.daemon = True
         end_of_game_thread.start()
 
-        # Main game loop - keep running for multiple games
         while True:
             try:
                 # Wait for a valid session (champ select)
@@ -104,8 +106,13 @@ def main():
                 session = wait_for_champ_select()
 
                 # Save LP before game starts
-                queue_type = get_queueType(session)
-                save_pre_game_lp(queue_type)
+                global current_queue_type
+                current_queue_type = get_queueType(session)
+                if not current_queue_type:
+                    # Skip current iteration of loop. The queue is not a ranked queue.
+                    continue
+
+                save_pre_game_lp(current_queue_type)
 
                 schedule_champ_select_message(session)
                 swap_role(session, config)
