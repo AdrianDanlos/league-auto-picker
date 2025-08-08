@@ -82,8 +82,10 @@ def select_default_pick(
 ):
     """Select a default pick when no counter-pick is available."""
     print("No counter pick found")
-    mode = "RANDOM_MODE" if config.get("random_mode_active", False) else "DEFAULT"
+    mode = "RANDOM_MODE" if config.get("random_mode_active") else "DEFAULT"
+    print(f"Mode: {mode}")
     default_picks = config["picks"].get(mode, {}).get(lane_key, [])
+    print(f"Default picks: {default_picks}")
     if default_picks:
         # Filter available default picks (not prepicked by teammates)
         available_defaults = []
@@ -99,8 +101,11 @@ def select_default_pick(
 
         if available_defaults:
             if mode == "DEFAULT":
+                print(f"Default pick: {available_defaults[0]}")
                 return available_defaults[0]
             else:
-                return random.choice(available_defaults)
+                random_pick = random.choice(available_defaults)
+                print(f"Random pick: {random_pick}")
+                return random_pick
 
     return None
