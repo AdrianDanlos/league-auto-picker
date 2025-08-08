@@ -112,7 +112,7 @@ def swap_pick_position():
                     else:
                         break  # Assume no ongoing swap if endpoint fails {ongoing_res.status_code}
                 except Exception as e:
-                    log_and_discord(f"[Pick Swap] Failed to check ongoing swap: {e}")
+                    print(f"[Pick Swap] Failed to check ongoing swap: {e}")
                     break  # Proceed anyway if we can't check
 
             if wait_count >= 10:
