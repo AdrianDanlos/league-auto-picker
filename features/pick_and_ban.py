@@ -103,6 +103,7 @@ def pick_and_ban(config):
             # Only proceed if we're in a relevant phase
             if not current_phase or current_phase not in ["BAN_PICK", "FINALIZATION"]:
                 time.sleep(4)
+                session = get_session()
                 continue
 
             # Collect all championIds picked (hovered or locked in) by teammates
@@ -115,14 +116,7 @@ def pick_and_ban(config):
                         and action["actorCellId"] in my_team_cell_ids
                         and action.get("championId", 0) not in (0, None)
                     ):
-                        champion_id = action["championId"]
-                        # Add type checking to ensure we only add valid champion IDs
-                        if isinstance(champion_id, (int, str)):
-                            ally_champion_ids.add(champion_id)
-                        else:
-                            log_and_discord(
-                                f"⚠️ Warning: Invalid champion ID type: {type(champion_id)}, value: {champion_id}"
-                            )
+                        ally_champion_ids.add(action["championId"])
 
             for action_group in actions:
                 for action in action_group:
@@ -134,10 +128,12 @@ def pick_and_ban(config):
                             continue
 
                         if action["type"] == "ban":
-                            champ = config["bans"].get(lane_key, None)
-                            champ_id = CHAMPION_IDS.get(champ)
-                            if champ_id:
-                                execute_ban(action, champ, champ_id)
+                            champions_to_ban = config["bans"].get(lane_key, [])
+                            for champ in champions_to_ban:
+                                champ_id = CHAMPION_IDS.get(champ)
+                                if champ_id and champ_id not in ally_champion_ids:
+                                    execute_ban(action, champ, champ_id)
+                                    break
 
                         elif action["type"] == "pick":
                             print(
