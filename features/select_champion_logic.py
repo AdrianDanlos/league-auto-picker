@@ -97,6 +97,7 @@ def select_default_pick(
                 enemy_champions,
                 champion_ids,
             ):
+                print(f"Available default: {default_champ}")
                 available_defaults.append(default_champ)
 
         if available_defaults:
