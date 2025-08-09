@@ -10,6 +10,11 @@ webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoym
 
 def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
     try:
+        # If summoner name is None we assume the data passed is null and therefore don't send the message.
+        # This could happen sometimes when there is a weird state where global variables are still undefined (maybe unclosed threads)
+        if not summoner_name:
+            return
+
         # Extract data from last_game_data
         win_loss = last_game_data.get("win_loss", {})
         champion = last_game_data.get("champion", {})

@@ -3,9 +3,13 @@ from features.discord_message import get_game_data
 from utils import get_auth, get_base_url
 from utils import get_rank_data
 from utils import shared_state
+from utils.lcu_connection import get_session
 
 
 def save_pre_game_lp(queue_type):
+    if get_session() is None:
+        return
+
     # save these 3 values (tier, division, lp) into global value that can be used anytime in the code
     rank_data = get_rank_data(queue_type)
     shared_state.pre_game_lp = {
