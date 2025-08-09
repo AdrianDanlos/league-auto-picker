@@ -24,6 +24,8 @@ def swap_pick_position():
     """
     Automatically requests pick order swaps to move to the 5th pick position.
 
+    # The whole swap feature is only for top and middle
+
     This function continuously attempts to swap pick positions until the user reaches
     the 5th pick position. It intelligently handles ongoing swaps and manages
     swap requests to ensure smooth operation.
@@ -145,6 +147,9 @@ def swap_pick_position():
             for participant in my_team:
                 cell_id = participant.get("cellId")
                 assigned_position = participant.get("assignedPosition")
+                # The whole swap feature is only for top and middle
+                if assigned_position not in ["top", "middle"]:
+                    return
                 pick_order = get_pick_order(session, cell_id)
                 if (
                     pick_order

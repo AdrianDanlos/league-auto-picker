@@ -7,7 +7,7 @@ League Auto Picker is an automation utility programm designed to enhance the Lea
 - 🤖 **Automated Champion Selection**: Automatically picks champions based on your preferences and counter picks
 - 🚫 **Smart Banning**: Automatically bans specified champions
 - ⚡ **Queue Management**: Automatically accepts queue pops
-- 🔄 **Position Swapping**: Handles position and pick order swaps by trying to get your preferred role and pick as late as possible
+- 🔄 **Position Swapping**: Handles position and pick order swaps by trying to get your preferred role and pick as late as possible. (Trying to pick as late as possible is only applyable for top and mid)
 - 🛡️ **Auto-Decline Swaps**: Automatically declines incoming swap requests, trades, and position swaps after a couple of seconds
 - 💬 **Communication**: Sends custom messages during the selection phase
 - 🔮 **Smart Runes & Summoner Spells**: Automatically selects optimal runes and summoner spells for your champion
@@ -37,10 +37,11 @@ For reference check the `config.example.json` file. Once you have updated it ren
 
 More information about the `config.json` file:
 
-**Picks Section**: The bot follows this priority order when picking champions: 
-1) First, it checks if any enemy picked a champion you have a counter for and selects your counter pick (if multiple champions can counter the same enemy, it picks the one where that enemy appears earliest in your counter list) 
-2) If no counters apply, it picks from your "DEFAULT" list for that role (Useful when you always want to pick a specific champion in case we are blindpicking) 
-3) If "random_mode_active" is true, it randomly selects from your "RANDOM_MODE" pool instead of using the first default champion. (Useful to be able to play a variety of champions whenever we are blindpicking)
+**Picks Section**: The bot follows this priority order when picking champions:
+
+1. First, it checks if any enemy picked a champion you have a counter for and selects your counter pick (if multiple champions can counter the same enemy, it picks the one where that enemy appears earliest in your counter list)
+2. If no counters apply, it picks from your "DEFAULT" list for that role (Useful when you always want to pick a specific champion in case we are blindpicking)
+3. If "random_mode_active" is true, it randomly selects from your "RANDOM_MODE" pool instead of using the first default champion. (Useful to be able to play a variety of champions whenever we are blindpicking)
 
 **Summoner spells**: You can set default summoner spells for each role, and override them by specifying champion-specific summoner spells for that role.
 
