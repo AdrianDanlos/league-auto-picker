@@ -166,12 +166,6 @@ def pick_and_ban(config):
                                 create_discord_message(champion_name, session)
                                 return
 
-                            # Re check if its still our turn, we might have switched pick positions on our turn to pick
-                            session = get_session()
-                            is_our_turn = is_still_our_turn_to_pick(session, my_cell_id)
-                            if not is_our_turn:
-                                break
-
                             try:
                                 lane_picks_config = config["picks"].get(lane_key, {})
 
@@ -192,6 +186,14 @@ def pick_and_ban(config):
                                 log_and_discord(f"⚠️ Error in pick logic: {e}")
                                 best_pick = None
                                 banned_champions_ids = []  # Fallback to empty list
+
+                            # Re check if its still our turn, we might have switched pick positions on our turn to pick
+                            session = get_session()
+                            is_our_turn = is_still_our_turn_to_pick(
+                                session, my_cell_id
+                            )
+                            if not is_our_turn:
+                                break
 
                             # If no counter-pick found, use DEFAULT
                             if not best_pick:

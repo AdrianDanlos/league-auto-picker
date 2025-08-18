@@ -35,7 +35,7 @@ def get_rank_data(queueType):
             }
 
     except Exception as e:
-        log_and_discord(f"❌ Unexpected error getting rank data: {e}")
+        print(f"❌ Unexpected error getting rank data: {e}")
         return {
             "tier": "Unknown",
             "division": "Unknown",
