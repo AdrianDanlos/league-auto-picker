@@ -221,49 +221,55 @@ def pick_and_ban(config):
 
                             # Check if it's time to lock in (only if we have preselected)
                             if preselected_champion:
-                                timer_obj = session.get("timer", {})
-
-                                # Should never be None, this is just for debugging purposes
-                                if timer_obj is None:
-                                    print("ERROR: timer is None")
-
-                                timeLeftToPickMilis = timer_obj.get(
+                                timeLeftToPickMilis = session.get("timer", {}).get(
                                     "adjustedTimeLeftInPhase", 0
                                 )
 
-                                # Lock in when time is running low
-                                if timeLeftToPickMilis <= PICK_TIME_LEFT_MS:
-                                    print(f"🔒 Time to lock in {preselected_champion}!")
+                                # Should never be None, this is just for debugging purposes
+                                if timeLeftToPickMilis is None:
+                                    print("ERROR: timer is None")
 
-                                    # Re-check if it's still our turn before locking
-                                    # Should never be None, this is just for debugging purposes
-                                    session = get_session()
-                                    if session is None:
-                                        print("ERROR: session is None")
+                                # Calculate sleep time, ensuring it's not negative
+                                sleep_time = max(
+                                    0, (timeLeftToPickMilis - PICK_TIME_LEFT_MS) / 1000
+                                )
 
-                                    is_our_turn = is_still_our_turn_to_pick(
-                                        session, session.get("localPlayerCellId")
+                                # Pick when there is 5 seconds left (5000ms) - PICK_TIME_LEFT_MS
+                                if sleep_time > 0:
+                                    time.sleep(sleep_time)
+
+                                print(f"🔒 Time to lock in {preselected_champion}!")
+
+                                # Re-check if it's still our turn before locking
+                                # Should never be None, this is just for debugging purposes
+                                session = get_session()
+                                if session is None:
+                                    print("ERROR: session is None")
+
+                                is_our_turn = is_still_our_turn_to_pick(
+                                    session, session.get("localPlayerCellId")
+                                )
+                                if not is_our_turn:
+                                    print("❌ No longer our turn to pick")
+                                    preselected_champion = (
+                                        None  # Reset since we lost our turn
                                     )
-                                    if not is_our_turn:
-                                        print("❌ No longer our turn to pick")
-                                        break
+                                    break
 
-                                    champ_id = CHAMPION_IDS.get(preselected_champion)
-                                    if execute_pick(
-                                        action, preselected_champion, champ_id
-                                    ):
-                                        create_discord_message(
-                                            preselected_champion, session
-                                        )
-                                        select_default_runes()
-                                        select_summoner_spells(
-                                            config, preselected_champion, assigned_lane
-                                        )
-                                        break
-                                    else:
-                                        log_and_discord(
-                                            f"❌ Failed to lock in {preselected_champion}"
-                                        )
+                                champ_id = CHAMPION_IDS.get(preselected_champion)
+                                if execute_pick(action, preselected_champion, champ_id):
+                                    create_discord_message(
+                                        preselected_champion, session
+                                    )
+                                    select_default_runes()
+                                    select_summoner_spells(
+                                        config, preselected_champion, assigned_lane
+                                    )
+                                    break
+                                else:
+                                    log_and_discord(
+                                        f"❌ Failed to lock in {preselected_champion}"
+                                    )
 
             # Wait 4 seconds before next iteration
             time.sleep(4)
