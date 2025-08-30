@@ -20,7 +20,7 @@ from utils import (
     is_still_our_turn_to_pick,
 )
 from features.select_champion_logic import find_best_counter_pick, select_default_pick
-from features.execute_pick_ban import execute_ban, execute_pick
+from features.execute_pick_ban import execute_ban, execute_pick, execute_preselect
 from features.discord_message import create_discord_message
 
 
@@ -77,6 +77,10 @@ def pick_and_ban(config):
         None: This function runs indefinitely until interrupted or session ends
     """
     print("🔄 Starting continuous pick and ban monitoring...")
+
+    # Track preselection state
+    preselected_champion = None
+    current_action_id = None
 
     while True:
         try:
@@ -136,32 +140,7 @@ def pick_and_ban(config):
                                     break
 
                         elif action["type"] == "pick":
-                            print(
-                                "⏰ It's time to pick! Waiting before making selection..."
-                            )
-
-                            timeLeftToPickMilis = session.get("timer", {}).get(
-                                "adjustedTimeLeftInPhase", 0
-                            )
-
-                            # Calculate sleep time, ensuring it's not negative
-                            sleep_time = max(
-                                0, (timeLeftToPickMilis - PICK_TIME_LEFT_MS) / 1000
-                            )
-
-                            # Pick when there is 5 seconds left (5000ms) - PICK_TIME_LEFT_MS
-                            if sleep_time > 0:
-                                time.sleep(sleep_time)
-
-                            # Re check if its still our turn, we might have switched pick positions on our turn to pick
-                            session = get_session()
-                            is_our_turn = is_still_our_turn_to_pick(
-                                session, session.get("localPlayerCellId")
-                            )
-                            if not is_our_turn:
-                                break
-
-                            # Check if already locked in before waiting
+                            # Check if already locked in
                             if is_champion_locked_in():
                                 CHAMPION_NAMES = fetch_champion_names()
                                 locked_in_champion_id = get_locked_in_champion()
@@ -174,52 +153,107 @@ def pick_and_ban(config):
                                 create_discord_message(champion_name, session)
                                 return
 
-                            try:
-                                lane_picks_config = config["picks"].get(lane_key, {})
-
-                                enemy_champions = get_enemy_champions(
-                                    session, CHAMPION_IDS
+                            # If this is a new action or we haven't preselected yet, do preselection
+                            if (
+                                current_action_id != action["id"]
+                                or not preselected_champion
+                            ):
+                                print(
+                                    "⏰ It's our turn to pick! Preselecting champion..."
                                 )
 
-                                banned_champions_ids = get_banned_champion_ids(session)
+                                # Reset state for new action
+                                current_action_id = action["id"]
+                                preselected_champion = None
 
-                                best_pick = find_best_counter_pick(
-                                    enemy_champions,
-                                    lane_picks_config,
-                                    ally_champion_ids,
-                                    banned_champions_ids,
-                                    CHAMPION_IDS,
-                                )
-                            except Exception as e:
-                                log_and_discord(f"⚠️ Error in pick logic: {e}")
-                                best_pick = None
-                                banned_champions_ids = []  # Fallback to empty list
-
-                            # If no counter-pick found, use DEFAULT
-                            if not best_pick:
-                                best_pick = select_default_pick(
-                                    config,
-                                    lane_key,
-                                    ally_champion_ids,
-                                    banned_champions_ids,
-                                    enemy_champions,
-                                    CHAMPION_IDS,
-                                )
-
-                            if best_pick:
-                                print(f"Picking {best_pick}")
-                                champ_id = CHAMPION_IDS.get(best_pick)
-                                if execute_pick(action, best_pick, champ_id):
-                                    create_discord_message(best_pick, session)
-                                    select_default_runes()
-                                    select_summoner_spells(
-                                        config, best_pick, assigned_lane
+                                try:
+                                    lane_picks_config = config["picks"].get(
+                                        lane_key, {}
                                     )
-                                    break
-                            else:
-                                log_and_discord(
-                                    "❌ No suitable champion found to pick."
+
+                                    enemy_champions = get_enemy_champions(
+                                        session, CHAMPION_IDS
+                                    )
+
+                                    banned_champions_ids = get_banned_champion_ids(
+                                        session
+                                    )
+
+                                    best_pick = find_best_counter_pick(
+                                        enemy_champions,
+                                        lane_picks_config,
+                                        ally_champion_ids,
+                                        banned_champions_ids,
+                                        CHAMPION_IDS,
+                                    )
+                                except Exception as e:
+                                    log_and_discord(f"⚠️ Error in pick logic: {e}")
+                                    best_pick = None
+                                    banned_champions_ids = []  # Fallback to empty list
+
+                                # If no counter-pick found, use DEFAULT
+                                if not best_pick:
+                                    best_pick = select_default_pick(
+                                        config,
+                                        lane_key,
+                                        ally_champion_ids,
+                                        banned_champions_ids,
+                                        enemy_champions,
+                                        CHAMPION_IDS,
+                                    )
+
+                                if best_pick:
+                                    champ_id = CHAMPION_IDS.get(best_pick)
+                                    # Preselect the champion immediately
+                                    if execute_preselect(action, best_pick, champ_id):
+                                        preselected_champion = best_pick
+                                        print(
+                                            f"🎯 Preselected {best_pick}, will lock in when timer is low..."
+                                        )
+                                    else:
+                                        log_and_discord(
+                                            f"❌ Failed to preselect {best_pick}"
+                                        )
+                                else:
+                                    log_and_discord(
+                                        "❌ No suitable champion found to pick."
+                                    )
+
+                            # Check if it's time to lock in (only if we have preselected)
+                            if preselected_champion:
+                                timeLeftToPickMilis = session.get("timer", {}).get(
+                                    "adjustedTimeLeftInPhase", 0
                                 )
+
+                                # Lock in when time is running low
+                                if timeLeftToPickMilis <= PICK_TIME_LEFT_MS:
+                                    print(f"🔒 Time to lock in {preselected_champion}!")
+
+                                    # Re-check if it's still our turn before locking
+                                    session = get_session()
+                                    is_our_turn = is_still_our_turn_to_pick(
+                                        session, session.get("localPlayerCellId")
+                                    )
+                                    if not is_our_turn:
+                                        print("❌ No longer our turn to pick")
+                                        break
+
+                                    champ_id = CHAMPION_IDS.get(preselected_champion)
+                                    if execute_pick(
+                                        action, preselected_champion, champ_id
+                                    ):
+                                        create_discord_message(
+                                            preselected_champion, session
+                                        )
+                                        select_default_runes()
+                                        select_summoner_spells(
+                                            config, preselected_champion, assigned_lane
+                                        )
+                                        break
+                                    else:
+                                        log_and_discord(
+                                            f"❌ Failed to lock in {preselected_champion}"
+                                        )
 
             # Wait 4 seconds before next iteration
             time.sleep(4)
