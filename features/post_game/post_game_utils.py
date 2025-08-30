@@ -1,7 +1,7 @@
 import requests
 from features.discord_message import get_game_data
 from utils import get_auth, get_base_url
-from utils import get_rank_data
+from utils import get_rank_data, LeagueClientDisconnected
 from utils import shared_state
 from utils.lcu_connection import get_session
 
@@ -10,13 +10,16 @@ def save_pre_game_lp(queue_type):
     if get_session() is None:
         return
 
-    # save these 3 values (tier, division, lp) into global value that can be used anytime in the code
-    rank_data = get_rank_data(queue_type)
-    shared_state.pre_game_lp = {
-        "tier": rank_data.get("tier"),
-        "division": rank_data.get("division"),
-        "lp": rank_data.get("lp"),
-    }
+    try:
+        # save these 3 values (tier, division, lp) into global value that can be used anytime in the code
+        rank_data = get_rank_data(queue_type)
+        shared_state.pre_game_lp = {
+            "tier": rank_data.get("tier"),
+            "division": rank_data.get("division"),
+            "lp": rank_data.get("lp"),
+        }
+    except LeagueClientDisconnected:
+        return
 
 
 def get_win_loss_status(latest_game, participant_id):
@@ -177,11 +180,14 @@ def get_rank_changes():
     game_data = get_game_data()
     queue_type = game_data.get("queueType")
 
-    # Get current (post-game) rank data
-    current_rank_data = get_rank_data(queue_type)
-    current_tier = current_rank_data.get("tier", "Unknown")
-    current_division = current_rank_data.get("division", "Unknown")
-    current_lp = current_rank_data.get("lp", 0)
+    try:
+        # Get current (post-game) rank data
+        current_rank_data = get_rank_data(queue_type)
+        current_tier = current_rank_data.get("tier", "Unknown")
+        current_division = current_rank_data.get("division", "Unknown")
+        current_lp = current_rank_data.get("lp", 0)
+    except LeagueClientDisconnected:
+        return None
 
     # Get pre-game rank data
     pre_division = shared_state.pre_game_lp.get("division", "Unknown")

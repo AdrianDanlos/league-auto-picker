@@ -1,7 +1,7 @@
 import requests
 from urllib.parse import quote
 from utils.logger import log_and_discord
-from utils import get_gameflow_phase, get_rank_data
+from utils import get_gameflow_phase, get_rank_data, LeagueClientDisconnected
 from utils import get_assigned_lane, get_region, get_queueType, get_summoner_name
 from utils import shared_state
 
@@ -13,6 +13,10 @@ def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
         # If summoner name is None we assume the data passed is null and therefore don't send the message.
         # This could happen sometimes when there is a weird state where global variables are still undefined (maybe unclosed threads)
         if not summoner_name:
+            return
+
+        # If rank_changes is None (client disconnected), don't send the message
+        if rank_changes is None:
             return
 
         # Extract data from last_game_data
@@ -62,6 +66,8 @@ def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
             log_and_discord(
                 f"❌ Error sending discord message with post game stats: {response.status_code}"
             )
+    except LeagueClientDisconnected:
+        return
     except Exception as e:
         log_and_discord(
             f"❌ Unexpected error sending discord message with post game stats: {e}"
@@ -107,6 +113,8 @@ def send_discord_pre_game_message(game_data):
                     f"❌ Error sending discord message: {response.status_code}"
                 )
 
+    except LeagueClientDisconnected:
+        return
     except Exception as e:
         log_and_discord(f"❌ Unexpected error sending discord message: {e}")
 

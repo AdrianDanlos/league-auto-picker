@@ -35,6 +35,12 @@ def get_rank_data(queueType):
                 "lp": 0,
             }
 
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
+        RuntimeError,
+    ):
+        raise LeagueClientDisconnected()
     except Exception as e:
         print(f"❌ Unexpected error getting rank data: {e}")
         return {
