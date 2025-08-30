@@ -2,6 +2,8 @@ import requests
 import psutil
 import re
 
+from .exceptions import LeagueClientDisconnected
+
 
 def get_lcu_credentials():
     for proc in psutil.process_iter(["cmdline"]):
@@ -50,11 +52,13 @@ def get_session():
             verify=False,
         )
         return r.json() if r.status_code == 200 else None
-    except requests.exceptions.ConnectionError:
-        print(
-            "⚠️  Cannot connect to League client. Please ensure League of Legends is running."
-        )
-        return None
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
+        RuntimeError,
+    ):
+        # League client has disconnected - raise a generic exception
+        raise LeagueClientDisconnected()
     except Exception as e:
         print(f"⚠️  Error connecting to League client: {e}")
         return None

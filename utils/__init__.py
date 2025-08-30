@@ -30,6 +30,7 @@ from .champion_utils import (
     get_locked_in_champion,
 )
 from .logger import log_and_discord, send_discord_error_message
+from .exceptions import LeagueClientDisconnected
 from . import shared_state
 
 __all__ = [
@@ -59,6 +60,8 @@ __all__ = [
     # Logging utilities
     "log_and_discord",
     "send_discord_error_message",
+    # Exceptions
+    "LeagueClientDisconnected",
     # Shared state
     "shared_state",
 ]

@@ -2,7 +2,7 @@ import requests
 import time
 
 from utils.logger import log_and_discord
-from utils import get_auth, get_base_url, get_session
+from utils import get_auth, get_base_url, get_session, LeagueClientDisconnected
 
 
 def accept_queue():
@@ -82,6 +82,13 @@ def accept_queue():
                                 break
 
             time.sleep(1)
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.RequestException,
+            RuntimeError,
+        ):
+            # League client has disconnected - raise a generic exception
+            raise LeagueClientDisconnected()
         except Exception as e:
             print(f"[Queue Accept Error]: {e}")
             time.sleep(5)

@@ -3,6 +3,7 @@ import json
 import urllib3
 import threading
 import sys
+import utils.lcu_connection as lcu
 
 from features.post_game.end_of_game_actions import start_end_of_game_actions
 from features.discord_message import (
@@ -16,7 +17,13 @@ from features.swap_role import swap_role
 from features.swap_pick_position import swap_pick_position
 from features.send_chat_message import schedule_champ_select_message
 from features.post_game.post_game_utils import save_pre_game_lp
-from utils import get_base_url, get_auth, get_session, get_queueType
+from utils import (
+    get_base_url,
+    get_auth,
+    get_session,
+    get_queueType,
+    LeagueClientDisconnected,
+)
 from utils.logger import logger
 from utils import shared_state
 
@@ -48,6 +55,24 @@ def check_league_client():
     except Exception as e:
         print(f"❌ Error connecting to League client: {e}")
         return False
+
+
+def check_league_client_silent():
+    """Check if League client is running and accessible (no error messages)"""
+    try:
+        get_base_url()
+        get_auth()
+        return True
+    except Exception:
+        return False
+
+
+def start_end_of_game_thread():
+    """Start the end of game monitoring thread"""
+    end_of_game_thread = threading.Thread(target=start_end_of_game_actions)
+    end_of_game_thread.daemon = True
+    end_of_game_thread.start()
+    return end_of_game_thread
 
 
 def wait_for_champ_select():
@@ -94,12 +119,39 @@ def main():
 
     try:
         # Start end of game actions in a single long-lived thread
-        end_of_game_thread = threading.Thread(target=start_end_of_game_actions)
-        end_of_game_thread.daemon = True
-        end_of_game_thread.start()
+        start_end_of_game_thread()
 
         while True:
             try:
+                # Check if League client disconnected from background thread
+                if shared_state.client_disconnected:
+
+                    # Reset credentials cache
+                    lcu._port = None
+                    lcu._token = None
+                    lcu._base_url = None
+                    lcu._auth = None
+
+                    # Reset shared state
+                    shared_state.client_disconnected = False
+                    shared_state.current_queue_type = None
+
+                    # Wait for League client to be available again instead of restarting
+                    print("🔄 Waiting for League client to restart...")
+                    while True:
+                        try:
+                            time.sleep(5)  # Wait 5 seconds between checks
+                            if check_league_client_silent():
+                                print("✅ League client reconnected!")
+                                break
+                        except KeyboardInterrupt:
+                            print("\n👋 Shutting down gracefully...")
+                            return
+
+                    # Restart end of game monitoring thread since the old one stopped
+                    start_end_of_game_thread()
+                    continue
+
                 # Wait for a valid session (champ select)
                 # This blocks until queue is accepted
                 session = wait_for_champ_select()
@@ -147,6 +199,10 @@ def main():
             except KeyboardInterrupt:
                 print("\n👋 Shutting down gracefully...")
                 break
+            except LeagueClientDisconnected:
+                print("🔄 League client disconnected")
+                shared_state.client_disconnected = True
+                continue
             except Exception as e:
                 print(f"❌ Error during game session: {e}")
                 print("🔄 Restarting and waiting for next queue...")

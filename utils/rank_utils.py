@@ -2,6 +2,7 @@ import requests
 
 from .logger import log_and_discord
 from .lcu_connection import get_auth, get_base_url
+from .exceptions import LeagueClientDisconnected
 
 
 def get_rank_data(queueType):
@@ -62,6 +63,13 @@ def get_gameflow_phase():
             )
             return None
 
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
+        RuntimeError,
+    ):
+        # League client has disconnected - raise a generic exception
+        raise LeagueClientDisconnected()
     except Exception as e:
         print(f"❌ Unexpected error getting gameflow phase: {e}")
         return None

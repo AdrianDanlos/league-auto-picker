@@ -18,3 +18,6 @@ game_data = {
     "region": None,
     "queueType": None,
 }
+
+# Global flag to indicate if League client disconnected
+client_disconnected = False
