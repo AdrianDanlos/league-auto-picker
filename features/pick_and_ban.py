@@ -221,7 +221,13 @@ def pick_and_ban(config):
 
                             # Check if it's time to lock in (only if we have preselected)
                             if preselected_champion:
-                                timeLeftToPickMilis = session.get("timer", {}).get(
+                                timer_obj = session.get("timer", {})
+
+                                # Should never be None, this is just for debugging purposes
+                                if timer_obj is None:
+                                    print("ERROR: timer is None")
+
+                                timeLeftToPickMilis = timer_obj.get(
                                     "adjustedTimeLeftInPhase", 0
                                 )
 
@@ -230,7 +236,11 @@ def pick_and_ban(config):
                                     print(f"🔒 Time to lock in {preselected_champion}!")
 
                                     # Re-check if it's still our turn before locking
+                                    # Should never be None, this is just for debugging purposes
                                     session = get_session()
+                                    if session is None:
+                                        print("ERROR: session is None")
+                                        
                                     is_our_turn = is_still_our_turn_to_pick(
                                         session, session.get("localPlayerCellId")
                                     )
