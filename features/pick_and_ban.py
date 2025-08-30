@@ -240,7 +240,7 @@ def pick_and_ban(config):
                                     session = get_session()
                                     if session is None:
                                         print("ERROR: session is None")
-                                        
+
                                     is_our_turn = is_still_our_turn_to_pick(
                                         session, session.get("localPlayerCellId")
                                     )
