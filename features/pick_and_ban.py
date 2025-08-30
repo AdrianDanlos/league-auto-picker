@@ -6,7 +6,7 @@ from features.select_default_runes_and_summs import (
     select_summoner_spells,
 )
 from utils.logger import log_and_discord
-from utils import get_session
+from utils import get_session, LeagueClientDisconnected
 from utils import (
     fetch_champion_ids,
     fetch_champion_names,
@@ -260,6 +260,8 @@ def pick_and_ban(config):
 
         except KeyboardInterrupt:
             print("\n🛑 Pick and ban monitoring stopped by user.")
+            break
+        except LeagueClientDisconnected:
             break
         except Exception as e:
             log_and_discord(f"❌ Error in pick and ban loop: {e}")

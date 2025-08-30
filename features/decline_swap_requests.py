@@ -2,7 +2,7 @@ import requests
 import time
 
 from utils.logger import log_and_discord
-from utils import get_auth, get_base_url, get_session
+from utils import get_auth, get_base_url, get_session, LeagueClientDisconnected
 
 
 def decline_incoming_swap_requests():
@@ -105,6 +105,8 @@ def decline_incoming_swap_requests():
             else:
                 # No received requests
                 continue
+        except LeagueClientDisconnected:
+            return
         except Exception as e:
             log_and_discord(
                 f"[Swap Decline] Exception while handling incoming swap requests: {e}"
