@@ -58,6 +58,17 @@ def is_still_our_turn_to_pick(session, my_cell_id):
     """Check if it's still our turn to pick."""
     actions = session.get("actions", [])
 
+    print(f"[DEBUG] Checking if still our turn for cell_id: {my_cell_id}")
+
+    # Debug: print all actions and their status
+    for group_idx, action_group in enumerate(actions):
+        print(f"[DEBUG] Action group {group_idx}:")
+        for action_idx, action in enumerate(action_group):
+            if action["type"] == "pick":
+                print(
+                    f"  Action {action_idx}: cellId={action['actorCellId']}, isInProgress={action['isInProgress']}, type={action['type']}"
+                )
+
     for action_group in actions:
         for action in action_group:
             if (
@@ -65,8 +76,10 @@ def is_still_our_turn_to_pick(session, my_cell_id):
                 and action["isInProgress"]
                 and action["type"] == "pick"
             ):
+                print("[DEBUG] Found our active pick action - returning True")
                 return True
 
+    print("[DEBUG] No active pick action found for our cell_id - returning False")
     return False
 
 

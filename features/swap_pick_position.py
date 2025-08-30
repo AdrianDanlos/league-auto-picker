@@ -20,11 +20,11 @@ def get_pick_order(session, cell_id):
     return None
 
 
-# def get_assigned_position(my_team, cell_id):
-#     for participant in my_team:
-#         if participant.get("cellId") == cell_id:
-#             return participant.get("assignedPosition")
-#     return None
+def get_assigned_position(my_team, cell_id):
+    for participant in my_team:
+        if participant.get("cellId") == cell_id:
+            return participant.get("assignedPosition")
+    return None
 
 
 def swap_pick_position():
@@ -86,10 +86,10 @@ def swap_pick_position():
         my_cell_id = session.get("localPlayerCellId")
         my_team = session.get("myTeam", [])
 
-        # my_assigned_position = get_assigned_position(my_team, my_cell_id)
-        # if my_assigned_position not in ["top", "middle"]:
-        #     print("[Pick Swap] You are not top or middle, no need to swap.")
-        #     return
+        my_assigned_position = get_assigned_position(my_team, my_cell_id)
+        if my_assigned_position not in ["top", "middle"]:
+            print("[Pick Swap] You are not top or middle, no need to swap.")
+            return
 
         my_pick_order = get_pick_order(session, my_cell_id)
 
@@ -150,6 +150,7 @@ def swap_pick_position():
                 print(f"[Pick Swap] Failed to fetch session: {e}")
                 break
 
+            my_cell_id = session.get("localPlayerCellId")
             my_pick_order = get_pick_order(session, my_cell_id)
             if not my_pick_order:
                 log_and_discord("[Pick Swap] Could not determine your pick order.")

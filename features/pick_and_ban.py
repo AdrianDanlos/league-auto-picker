@@ -153,6 +153,14 @@ def pick_and_ban(config):
                             if sleep_time > 0:
                                 time.sleep(sleep_time)
 
+                            # Re check if its still our turn, we might have switched pick positions on our turn to pick
+                            session = get_session()
+                            is_our_turn = is_still_our_turn_to_pick(
+                                session, session.get("localPlayerCellId")
+                            )
+                            if not is_our_turn:
+                                break
+
                             # Check if already locked in before waiting
                             if is_champion_locked_in():
                                 CHAMPION_NAMES = fetch_champion_names()
@@ -186,14 +194,6 @@ def pick_and_ban(config):
                                 log_and_discord(f"⚠️ Error in pick logic: {e}")
                                 best_pick = None
                                 banned_champions_ids = []  # Fallback to empty list
-
-                            # Re check if its still our turn, we might have switched pick positions on our turn to pick
-                            session = get_session()
-                            is_our_turn = is_still_our_turn_to_pick(
-                                session, my_cell_id
-                            )
-                            if not is_our_turn:
-                                break
 
                             # If no counter-pick found, use DEFAULT
                             if not best_pick:
