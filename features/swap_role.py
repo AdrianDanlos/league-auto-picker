@@ -2,10 +2,11 @@ import requests
 import time
 
 from utils.logger import log_and_discord
-from utils import get_auth, get_base_url, LeagueClientDisconnected
+from utils import get_auth, get_base_url, handle_connection_errors
 from utils.session_utils import get_assigned_lane
 
 
+@handle_connection_errors
 def swap_role(session, config):
     """
     Checks for ongoing position swaps and attempts to swap roles if needed.
@@ -177,13 +178,6 @@ def swap_role(session, config):
                     # Note: AVAILABLE state can mean either the request is pending or expired
                     # We don't treat AVAILABLE as accepted anymore - only actual role changes indicate acceptance
 
-                except (
-                    requests.exceptions.ConnectionError,
-                    requests.exceptions.RequestException,
-                    RuntimeError,
-                ):
-                    # League client has disconnected - raise a generic exception
-                    raise LeagueClientDisconnected()
                 except Exception:
                     continue
 
@@ -195,12 +189,5 @@ def swap_role(session, config):
             log_and_discord(
                 f"[Role Swap] Role swap error: {request_res.status_code} {request_res.text}"
             )
-    except (
-        requests.exceptions.ConnectionError,
-        requests.exceptions.RequestException,
-        RuntimeError,
-    ):
-        # League client has disconnected - raise a generic exception
-        raise LeagueClientDisconnected()
     except Exception as e:
         log_and_discord(f"[Role Swap] Exception during swap request: {e}")
