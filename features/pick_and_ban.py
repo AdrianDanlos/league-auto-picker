@@ -250,7 +250,7 @@ def pick_and_ban(config):
                                 is_our_turn = is_still_our_turn_to_pick(
                                     session, session.get("localPlayerCellId")
                                 )
-                                if not is_our_turn:
+                                if not is_our_turn and not is_champion_locked_in():
                                     print("❌ No longer our turn to pick")
                                     preselected_champion = (
                                         None  # Reset since we lost our turn
