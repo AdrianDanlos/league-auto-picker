@@ -240,12 +240,13 @@ def pick_and_ban(config):
 
                                 print(f"🔒 Time to lock in {preselected_champion}!")
 
-                                # Re-check if it's still our turn before locking
-                                # Should never be None, this is just for debugging purposes
                                 session = get_session()
+
+                                # Should never be None, this is just for debugging purposes
                                 if session is None:
                                     print("ERROR: session is None")
 
+                                # Re-check if it's still our turn before locking
                                 is_our_turn = is_still_our_turn_to_pick(
                                     session, session.get("localPlayerCellId")
                                 )
