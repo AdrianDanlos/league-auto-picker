@@ -78,6 +78,8 @@ def pick_and_ban(config):
     """
     print("🔄 Starting continuous pick and ban monitoring...")
 
+    is_champion_preselected = False
+
     while True:
         try:
             session = get_session()
@@ -168,12 +170,13 @@ def pick_and_ban(config):
                                     CHAMPION_IDS,
                                 )
 
-                            champ_id_to_preselect = CHAMPION_IDS.get(best_pick)
-                            execute_preselect(action, best_pick, champ_id_to_preselect)
-
-                            print(
-                                f"🎯 Preselected {best_pick}, will lock in when timer is low..."
-                            )
+                            if not is_champion_preselected:
+                                champ_id_to_preselect = CHAMPION_IDS.get(best_pick)
+                                execute_preselect(action, best_pick, champ_id_to_preselect)
+                                is_champion_preselected = True
+                                print(
+                                    f"🎯 Preselected {best_pick}, will lock in when timer is low..."
+                                )
 
                             timeLeftToPickMilis = session.get("timer", {}).get(
                                 "adjustedTimeLeftInPhase", 0
