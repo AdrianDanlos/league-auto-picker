@@ -1,7 +1,7 @@
 import requests
 import time
 from utils.logger import log_and_discord
-from utils import get_auth, get_base_url, get_session
+from utils import get_auth, get_base_url, get_session, LeagueClientDisconnected
 
 
 def get_pick_order(session, cell_id):
@@ -79,6 +79,13 @@ def swap_pick_position():
                     "[Pick Swap] Session is None - someone may have dodged or game just started. Exiting..."
                 )
                 return
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.RequestException,
+            RuntimeError,
+        ):
+            # League client has disconnected - raise a generic exception
+            raise LeagueClientDisconnected()
         except Exception as e:
             log_and_discord(f"[Pick Swap] Failed to fetch session: {e}")
             break
@@ -128,6 +135,13 @@ def swap_pick_position():
                             break  # No ongoing swap, proceed
                     else:
                         break  # Assume no ongoing swap if endpoint fails {ongoing_res.status_code}
+                except (
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.RequestException,
+                    RuntimeError,
+                ):
+                    # League client has disconnected - raise a generic exception
+                    raise LeagueClientDisconnected()
                 except Exception as e:
                     print(f"[Pick Swap] Failed to check ongoing swap: {e}")
                     break  # Proceed anyway if we can't check
@@ -146,6 +160,13 @@ def swap_pick_position():
                         "[Pick Swap] Session is None after re-fetch - someone may have dodged or game just started. Exiting..."
                     )
                     return
+            except (
+                requests.exceptions.ConnectionError,
+                requests.exceptions.RequestException,
+                RuntimeError,
+            ):
+                # League client has disconnected - raise a generic exception
+                raise LeagueClientDisconnected()
             except Exception as e:
                 print(f"[Pick Swap] Failed to fetch session: {e}")
                 break
@@ -216,6 +237,13 @@ def swap_pick_position():
 
                 # Wait 5 seconds after each request to prevent spam
                 time.sleep(5)
+            except (
+                requests.exceptions.ConnectionError,
+                requests.exceptions.RequestException,
+                RuntimeError,
+            ):
+                # League client has disconnected - raise a generic exception
+                raise LeagueClientDisconnected()
             except Exception as e:
                 log_and_discord(
                     f"[Pick Swap] Exception during swap request for cellId {cell_id}: {e}"

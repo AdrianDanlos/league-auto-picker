@@ -2,7 +2,8 @@ import requests
 import time
 
 from utils.logger import log_and_discord
-from utils import get_auth, get_base_url
+from utils import get_auth, get_base_url, LeagueClientDisconnected
+from utils.session_utils import get_assigned_lane
 
 
 def swap_role(session, config):
@@ -125,12 +126,24 @@ def swap_role(session, config):
             max_wait_time = 20
             wait_time = 0
             position_swap = None
+            initial_role = (
+                assigned_role  # Store initial role to check if it actually changed
+            )
 
             while wait_time < max_wait_time:
                 time.sleep(1)
                 wait_time += 1
 
                 try:
+                    # Check current session to see if roles have actually changed
+                    current_role = get_assigned_lane(session)
+
+                    # If our role changed to the preferred role, the swap was accepted
+                    if current_role == preferred_role and current_role != initial_role:
+                        print("[Role Swap] ✅ Accepted! Role swap successful.")
+                        return
+
+                    # Check swap state for decline detection
                     position_swaps_res = requests.get(
                         check_swap_url, auth=get_auth(), verify=False
                     )
@@ -146,32 +159,35 @@ def swap_role(session, config):
                                 break
 
                     else:
-                        print(f"[Role Swap] Error: {position_swaps_res.status_code}")
+                        print(f"[Role Swap] Error: {position_swaps_res.text}")
 
                     if not position_swap:
-                        print(
-                            f"[Role Swap] Error: No matching ID found for swap_id {swap_id} "
-                        )
                         log_and_discord(
                             f"[Role Swap] Error: No matching ID found for swap_id {swap_id} "
                         )
 
                     # Check trade state
                     position_swap_state = position_swap.get("state")
-                    if position_swap_state == "AVAILABLE":
-                        print("[Role Swap] ✅ Accepted!")
-                        return
-                    elif position_swap_state == "INVALID":
+                    if position_swap_state == "INVALID":
                         print("[Role Swap] ❌ Declined")
                         return
                     elif position_swap_state == "CANCELLED":
-                        print(f"[Role Swap] ⚠️ State {position_swap_state} not handled")
+                        print("[Role Swap] ⚠️ Cancelled")
                         return
+                    # Note: AVAILABLE state can mean either the request is pending or expired
+                    # We don't treat AVAILABLE as accepted anymore - only actual role changes indicate acceptance
 
+                except (
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.RequestException,
+                    RuntimeError,
+                ):
+                    # League client has disconnected - raise a generic exception
+                    raise LeagueClientDisconnected()
                 except Exception:
                     continue
 
-            print("[Role Swap] ⏰ Timeout")
+            print("[Role Swap] ⏰ Timeout - no response from other player")
         else:
             print(
                 f"[Role Swap] Role swap error: {request_res.status_code} {request_res.text}"
@@ -179,5 +195,12 @@ def swap_role(session, config):
             log_and_discord(
                 f"[Role Swap] Role swap error: {request_res.status_code} {request_res.text}"
             )
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
+        RuntimeError,
+    ):
+        # League client has disconnected - raise a generic exception
+        raise LeagueClientDisconnected()
     except Exception as e:
         log_and_discord(f"[Role Swap] Exception during swap request: {e}")

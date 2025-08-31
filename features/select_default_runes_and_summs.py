@@ -1,7 +1,7 @@
 import requests
 
 from utils.logger import log_and_discord
-from utils import get_auth, get_base_url
+from utils import get_auth, get_base_url, LeagueClientDisconnected
 
 
 def select_default_runes():
@@ -19,6 +19,13 @@ def select_default_runes():
                 f"❌ Failed to set current rune page to reccomended one (Status: {response.status_code}, {response.text})"
             )
 
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
+        RuntimeError,
+    ):
+        # League client has disconnected - raise a generic exception
+        raise LeagueClientDisconnected()
     except Exception as e:
         log_and_discord(f"❌ Unexpected error setting default runes and summs: {e}")
 
@@ -43,5 +50,12 @@ def select_summoner_spells(config, champion, assigned_lane):
                 f"❌ Failed to set the summoner spells (Status: {response.status_code}, {response.text})"
             )
 
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
+        RuntimeError,
+    ):
+        # League client has disconnected - raise a generic exception
+        raise LeagueClientDisconnected()
     except Exception as e:
         log_and_discord(f"❌ Unexpected error setting default runes and summs: {e}")

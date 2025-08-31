@@ -12,7 +12,6 @@ def find_best_counter_pick(
 ):
     """Find the best counter-pick based on enemy champions."""
     if not enemy_champions:
-        log_and_discord("No enemy champions found")
         return None
 
     best_pick = None

@@ -1,6 +1,6 @@
 import requests
 from utils.logger import log_and_discord
-from utils import get_auth, get_base_url
+from utils import get_auth, get_base_url, LeagueClientDisconnected
 
 
 def execute_ban(action, champion_name, champion_id):
@@ -21,6 +21,13 @@ def execute_ban(action, champion_name, champion_id):
         else:
             log_and_discord(f"❌ Failed to ban {champion_name}: {res.status_code}")
             return False
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
+        RuntimeError,
+    ):
+        # League client has disconnected - raise a generic exception
+        raise LeagueClientDisconnected()
     except Exception as e:
         log_and_discord(f"❌ Error executing ban for {champion_name}: {e}")
         return False
@@ -42,6 +49,13 @@ def execute_preselect(action, champion_name, champion_id):
                 f"❌ Failed to preselect {champion_name}: {res.status_code}"
             )
             return False
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
+        RuntimeError,
+    ):
+        # League client has disconnected - raise a generic exception
+        raise LeagueClientDisconnected()
     except Exception as e:
         log_and_discord(f"❌ Error executing preselect for {champion_name}: {e}")
         return False
@@ -62,6 +76,13 @@ def execute_pick(action, champion_name, champion_id):
         else:
             log_and_discord(f"❌ Failed to pick {champion_name}: {res.status_code}")
             return False
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
+        RuntimeError,
+    ):
+        # League client has disconnected - raise a generic exception
+        raise LeagueClientDisconnected()
     except Exception as e:
         log_and_discord(f"❌ Error executing pick for {champion_name}: {e}")
         return False
