@@ -148,8 +148,6 @@ def main():
                             print("\n👋 Shutting down gracefully...")
                             return
 
-                    # Restart end of game monitoring thread since the old one stopped
-                    start_end_of_game_thread()
                     continue
 
                 # Wait for a valid session (champ select)
