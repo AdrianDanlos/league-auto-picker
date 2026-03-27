@@ -116,7 +116,7 @@ def _run_prompt_window(default_role):
 
     ttk.Label(
         container,
-        text="Riot Client detected.\nPick your lane for this session:",
+        text="Riot Client detected.\nPick your lane for the next game:",
     ).grid(row=0, column=0, pady=(0, 8), sticky="w")
 
     dropdown = ttk.Combobox(
