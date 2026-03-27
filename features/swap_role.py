@@ -7,7 +7,7 @@ from utils.session_utils import get_assigned_lane
 
 
 @handle_connection_errors
-def swap_role(session, config):
+def swap_role(session, config, preferred_role_override=None):
     """
     Checks for ongoing position swaps and attempts to swap roles if needed.
 
@@ -66,7 +66,9 @@ def swap_role(session, config):
         log_and_discord("[Role Swap] Could not determine assigned role.")
         return
 
-    preferred_role = config.get("preferred_role", "")
+    preferred_role = preferred_role_override or config.get("preferred_role", "")
+    preferred_role = str(preferred_role).upper()
+    assigned_role = str(assigned_role).upper()
     if assigned_role == preferred_role:
         print(
             f"[Role Swap] Assigned role '{assigned_role}' is your preferred role. No swap needed."

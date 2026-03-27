@@ -3,6 +3,7 @@ import requests
 from utils import shared_state, LeagueClientDisconnected
 from features.discord_message import get_game_data
 from features.post_game.post_game_utils import sanitize_last_game_data, get_rank_changes
+from features.session_lane_prompt import prompt_session_lane_selection
 from features.discord_message import (
     get_gameflow_phase,
     send_discord_post_game_message,
@@ -27,6 +28,7 @@ def start_end_of_game_actions():
                     get_rank_changes(),
                     game_data["summoner_name"],
                 )
+                prompt_session_lane_selection(shared_state.config_preferred_role)
             elif gameflow_phase != "EndOfGame":
                 # Reset message_sent when we leave EndOfGame phase
                 message_sent = False

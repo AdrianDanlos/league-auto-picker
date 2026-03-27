@@ -3,6 +3,7 @@ import time
 
 from utils.logger import log_and_discord
 from utils import get_auth, get_base_url, get_session, LeagueClientDisconnected
+from features.session_lane_prompt import dismiss_lane_prompt_for_game_found
 
 
 def accept_queue():
@@ -35,6 +36,7 @@ def accept_queue():
                     last_state = state
 
                 if state == "InProgress":
+                    dismiss_lane_prompt_for_game_found()
                     accept = requests.post(
                         f"{get_base_url()}/lol-matchmaking/v1/ready-check/accept",
                         auth=get_auth(),

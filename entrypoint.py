@@ -17,6 +17,10 @@ from features.swap_role import swap_role
 from features.swap_pick_position import swap_pick_position
 from features.send_chat_message import schedule_champ_select_message
 from features.post_game.post_game_utils import save_pre_game_lp
+from features.session_lane_prompt import (
+    prompt_session_lane_selection,
+    consume_session_preferred_role,
+)
 from utils import (
     get_base_url,
     get_auth,
@@ -116,6 +120,8 @@ def main():
                 sys.exit(0)
 
     print("✅ Connected to League client successfully!")
+    shared_state.config_preferred_role = config.get("preferred_role")
+    prompt_session_lane_selection(config.get("preferred_role"))
 
     try:
         # Start end of game actions in a single long-lived thread
@@ -143,6 +149,10 @@ def main():
                             time.sleep(5)  # Wait 5 seconds between checks
                             if check_league_client_silent():
                                 print("✅ League client reconnected!")
+                                shared_state.config_preferred_role = config.get(
+                                    "preferred_role"
+                                )
+                                prompt_session_lane_selection(config.get("preferred_role"))
                                 break
                         except KeyboardInterrupt:
                             print("\n👋 Shutting down gracefully...")
@@ -163,7 +173,14 @@ def main():
                 save_pre_game_lp(shared_state.current_queue_type)
 
                 schedule_champ_select_message(session)
-                swap_role(session, config)
+                session_preferred_role = consume_session_preferred_role(
+                    config.get("preferred_role")
+                )
+                swap_role(
+                    session,
+                    config,
+                    preferred_role_override=session_preferred_role,
+                )
 
                 # Run concurrently in separate threads
                 pick_ban_thread = threading.Thread(target=pick_and_ban, args=(config,))

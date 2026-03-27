@@ -21,3 +21,6 @@ game_data = {
 
 # Global flag to indicate if League client disconnected
 client_disconnected = False
+
+# Preferred role loaded from config.json for prompt defaults/fallback.
+config_preferred_role = None
