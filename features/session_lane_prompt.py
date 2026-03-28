@@ -1,4 +1,5 @@
 import threading
+import time
 try:
     import tkinter as tk
     from tkinter import ttk
@@ -71,13 +72,29 @@ def dismiss_lane_prompt_for_game_found():
             pass
 
 
-def consume_session_preferred_role(config_preferred_role):
+def consume_session_preferred_role(
+    config_preferred_role, wait_for_selection_seconds=0
+):
     """
     Return selected role for this session (if any), otherwise config role.
 
     The selected role is consumed once so it only applies to one session.
     """
     global _selected_role
+
+    if wait_for_selection_seconds and wait_for_selection_seconds > 0:
+        deadline = time.time() + wait_for_selection_seconds
+        while time.time() < deadline:
+            with _lock:
+                if _selected_role:
+                    selected = _selected_role
+                    _selected_role = None
+                    return selected
+                is_prompt_active = _is_prompt_active
+            if not is_prompt_active:
+                break
+            time.sleep(0.2)
+
     with _lock:
         if _selected_role:
             selected = _selected_role
@@ -116,7 +133,7 @@ def _run_prompt_window(default_role):
 
     ttk.Label(
         container,
-        text="Riot Client detected.\nPick your lane for the next game:",
+        text="Queue accepted.\nPick your lane for this game:",
     ).grid(row=0, column=0, pady=(0, 8), sticky="w")
 
     dropdown = ttk.Combobox(

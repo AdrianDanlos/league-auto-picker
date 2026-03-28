@@ -256,13 +256,26 @@ def pick_and_ban(config, preferred_role_override=None):
                                     CHAMPION_IDS,
                                 )
 
+                            if not best_pick:
+                                log_and_discord(
+                                    "⚠️ Could not determine a valid champion to preselect/pick."
+                                )
+                                continue
+
                             if not is_champion_preselected:
                                 champ_id_to_preselect = CHAMPION_IDS.get(best_pick)
-                                execute_preselect(action, best_pick, champ_id_to_preselect)
-                                is_champion_preselected = True
-                                print(
-                                    f"🎯 Preselected {best_pick}, will lock in when timer is low..."
+                                preselect_success = execute_preselect(
+                                    action, best_pick, champ_id_to_preselect
                                 )
+                                if preselect_success:
+                                    is_champion_preselected = True
+                                    print(
+                                        f"🎯 Preselected {best_pick}, will lock in when timer is low..."
+                                    )
+                                else:
+                                    print(
+                                        f"⚠️ Preselect failed for {best_pick}. Will retry on next loop."
+                                    )
 
                             timeLeftToPickMilis = session.get("timer", {}).get(
                                 "adjustedTimeLeftInPhase", 0

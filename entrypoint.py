@@ -133,7 +133,6 @@ def main():
 
     print("✅ Connected to League client successfully!")
     shared_state.config_preferred_role = config.get("preferred_role")
-    prompt_session_lane_selection(config.get("preferred_role"))
 
     try:
         # Start end of game actions in a single long-lived thread
@@ -164,7 +163,6 @@ def main():
                                 shared_state.config_preferred_role = config.get(
                                     "preferred_role"
                                 )
-                                prompt_session_lane_selection(config.get("preferred_role"))
                                 break
                         except KeyboardInterrupt:
                             print("\n👋 Shutting down gracefully...")
@@ -185,8 +183,9 @@ def main():
                 save_pre_game_lp(shared_state.current_queue_type)
 
                 schedule_champ_select_message(session)
+                prompt_session_lane_selection(config.get("preferred_role"))
                 session_preferred_role = consume_session_preferred_role(
-                    config.get("preferred_role")
+                    config.get("preferred_role"), wait_for_selection_seconds=8
                 )
                 swap_role(
                     session,
