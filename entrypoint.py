@@ -30,6 +30,7 @@ from utils import (
 )
 from utils.logger import logger
 from utils import shared_state
+from utils.config_validation import validate_config
 
 # Disable warnings for self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -45,6 +46,17 @@ except FileNotFoundError:
 except json.JSONDecodeError:
     print("❌ Invalid JSON in config.json. Please check the file format.")
     sys.exit(1)
+
+validation_errors, validation_warnings = validate_config(config)
+if validation_errors:
+    print("❌ Invalid config.json. Please fix the following issues:")
+    for err in validation_errors:
+        print(f"   - {err}")
+    sys.exit(1)
+if validation_warnings:
+    print("⚠️ config.json warnings:")
+    for warning in validation_warnings:
+        print(f"   - {warning}")
 
 
 def check_league_client():
