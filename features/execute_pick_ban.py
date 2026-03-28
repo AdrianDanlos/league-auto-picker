@@ -53,20 +53,32 @@ def execute_preselect(action, champion_name, champion_id):
 def execute_preselect_intent(champion_name, champion_id, log_errors=True):
     """Set hover intent via my-selection, even before pick turn."""
     try:
+        # For pre-turn hover, Riot's champ-select API expects `intentChampionId`.
+        # Some clients still accept `championId`, so we keep a fallback for compatibility.
         res = requests.patch(
             f"{get_base_url()}/lol-champ-select/v1/session/my-selection",
-            json={"championId": champion_id},
+            json={"intentChampionId": champion_id},
             auth=get_auth(),
             verify=False,
         )
         if res.status_code == 204:
             return True
-        else:
-            if log_errors:
-                log_and_discord(
-                    f"❌ Failed to set preselect intent for {champion_name}: {res.status_code}"
-                )
-            return False
+
+        fallback_res = requests.patch(
+            f"{get_base_url()}/lol-champ-select/v1/session/my-selection",
+            json={"championId": champion_id},
+            auth=get_auth(),
+            verify=False,
+        )
+        if fallback_res.status_code == 204:
+            return True
+
+        if log_errors:
+            log_and_discord(
+                f"❌ Failed to set preselect intent for {champion_name}: "
+                f"{res.status_code}/{fallback_res.status_code}"
+            )
+        return False
     except Exception as e:
         if log_errors:
             log_and_discord(f"❌ Error setting preselect intent for {champion_name}: {e}")
