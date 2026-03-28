@@ -1,5 +1,6 @@
 import threading
 import time
+
 try:
     import tkinter as tk
     from tkinter import ttk
@@ -72,9 +73,7 @@ def dismiss_lane_prompt_for_game_found():
             pass
 
 
-def consume_session_preferred_role(
-    config_preferred_role, wait_for_selection_seconds=0
-):
+def consume_session_preferred_role(config_preferred_role, wait_for_selection_seconds=0):
     """
     Return selected role for this session (if any), otherwise config role.
 
@@ -133,7 +132,7 @@ def _run_prompt_window(default_role):
 
     ttk.Label(
         container,
-        text="Queue accepted.\nPick your lane for this game:",
+        text="Pick your lane for this game:",
     ).grid(row=0, column=0, pady=(0, 8), sticky="w")
 
     dropdown = ttk.Combobox(
@@ -171,4 +170,6 @@ def _run_prompt_window(default_role):
     with _lock:
         _root = None
         if _dismiss_reason == "game_found":
-            print("🎮 Game found before lane selection. Using preferred_role from config.json.")
+            print(
+                "🎮 Game found before lane selection. Using preferred_role from config.json."
+            )
