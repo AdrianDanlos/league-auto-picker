@@ -1,4 +1,4 @@
-from constants import FLEX_CODE, SOLOQ_CODE
+from constants import DRAFT_PICK_CODE, FLEX_CODE, SOLOQ_CODE
 
 
 def get_assigned_lane(session):
@@ -51,6 +51,8 @@ def get_queueType(session):
         return "RANKED_SOLO_5x5"
     elif queue_type == FLEX_CODE:
         return "RANKED_FLEX_SR"
+    elif queue_type == DRAFT_PICK_CODE:
+        return "NORMAL_DRAFT"
     return None
 
 

@@ -20,11 +20,16 @@ from utils import (
     is_still_our_turn_to_pick,
 )
 from features.select_champion_logic import find_best_counter_pick, select_default_pick
-from features.execute_pick_ban import execute_ban, execute_pick, execute_preselect
+from features.execute_pick_ban import (
+    execute_ban,
+    execute_pick,
+    execute_preselect,
+    execute_preselect_intent,
+)
 from features.discord_message import create_discord_message
 
 
-def pick_and_ban(config):
+def pick_and_ban(config, preferred_role_override=None):
     """
     Continuously monitors the League of Legends champion select session and automates the pick and ban process.
 
@@ -79,6 +84,7 @@ def pick_and_ban(config):
     print("🔄 Starting continuous pick and ban monitoring...")
 
     is_champion_preselected = False
+    is_early_default_intent_sent = False
 
     while True:
         try:
@@ -101,12 +107,34 @@ def pick_and_ban(config):
             # Get current phase from timer
             timer = session.get("timer", {})
             current_phase = timer.get("phase", "").upper()
+            preferred_lane_key = str(
+                preferred_role_override or config.get("preferred_role", "")
+            ).upper()
 
             # Only proceed if we're in a relevant phase
             if not current_phase or current_phase not in ["BAN_PICK", "FINALIZATION"]:
                 time.sleep(4)
                 session = get_session()
                 continue
+
+            # As soon as we enter lobby ban phase, preselect preferred-role default
+            # so teammates can see intent and avoid banning it.
+            if not is_early_default_intent_sent and current_phase == "BAN_PICK":
+                default_picks_for_preferred_role = (
+                    config.get("picks", {})
+                    .get("DEFAULT", {})
+                    .get(preferred_lane_key, [])
+                )
+                if default_picks_for_preferred_role:
+                    early_default_pick = default_picks_for_preferred_role[0]
+                    early_default_pick_id = CHAMPION_IDS.get(early_default_pick)
+                    if early_default_pick_id and execute_preselect_intent(
+                        early_default_pick, early_default_pick_id
+                    ):
+                        print(
+                            f"🎯 Early preselected {early_default_pick} for {preferred_lane_key}"
+                        )
+                        is_early_default_intent_sent = True
 
             # Collect all championIds picked (hovered or locked in) by teammates
             my_team_cell_ids = {p["cellId"] for p in session.get("myTeam", [])}

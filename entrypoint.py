@@ -167,7 +167,7 @@ def main():
                 # Save LP before game starts
                 shared_state.current_queue_type = get_queueType(session)
                 if not shared_state.current_queue_type:
-                    # Skip current iteration of loop. The queue is not a ranked queue.
+                    # Skip current iteration of loop. The queue is not supported.
                     continue
 
                 save_pre_game_lp(shared_state.current_queue_type)
@@ -183,7 +183,9 @@ def main():
                 )
 
                 # Run concurrently in separate threads
-                pick_ban_thread = threading.Thread(target=pick_and_ban, args=(config,))
+                pick_ban_thread = threading.Thread(
+                    target=pick_and_ban, args=(config, session_preferred_role)
+                )
                 swap_position_thread = threading.Thread(target=swap_pick_position)
 
                 handle_incoming_swap_requests_thread = threading.Thread(

@@ -15,7 +15,16 @@ def get_rank_data(queueType):
 
         if response.status_code == 200 or response.status_code == 204:
             player_data = response.json()
-            ranked_data = player_data["queueMap"][queueType]
+            queue_map = player_data.get("queueMap", {})
+            ranked_data = queue_map.get(queueType)
+            if not ranked_data:
+                return {
+                    "tier": "Unknown",
+                    "division": "Unknown",
+                    "wins": 0,
+                    "loses": 0,
+                    "lp": 0,
+                }
             return {
                 "tier": ranked_data.get("tier", "Unknown"),
                 "division": ranked_data.get("division", "Unknown"),
