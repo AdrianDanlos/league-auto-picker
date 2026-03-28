@@ -76,9 +76,36 @@ def execute_preselect_intent(champion_name, champion_id, log_errors=True):
             verify=False,
         )
 
+        # Some clients ignore my-selection intent updates but still allow patching
+        # our pending pick action with completed=false.
+        action_res = None
+        action_id = None
+        session_for_action = get_session() or {}
+        my_cell_id_for_action = session_for_action.get("localPlayerCellId")
+        for action_group in session_for_action.get("actions", []):
+            for action in action_group:
+                if (
+                    action.get("type") == "pick"
+                    and action.get("actorCellId") == my_cell_id_for_action
+                    and not action.get("completed", False)
+                ):
+                    action_id = action.get("id")
+                    break
+            if action_id:
+                break
+
+        if action_id:
+            action_res = requests.patch(
+                f"{get_base_url()}/lol-champ-select/v1/session/actions/{action_id}",
+                json={"championId": champion_id, "completed": False},
+                auth=get_auth(),
+                verify=False,
+            )
+
         # Read-after-write can be briefly stale in champ select.
         current_intent = 0
         current_champion = 0
+        action_pick_champion = 0
         my_selection = {}
         my_selection_status = None
         for _ in range(3):
@@ -91,6 +118,15 @@ def execute_preselect_intent(champion_name, champion_id, log_errors=True):
             )
             current_intent = my_player.get("championPickIntent")
             current_champion = my_player.get("championId")
+            for action_group in session.get("actions", []):
+                for action in action_group:
+                    if (
+                        action.get("type") == "pick"
+                        and action.get("actorCellId") == my_cell_id
+                        and not action.get("completed", False)
+                    ):
+                        action_pick_champion = action.get("championId", 0)
+                        break
 
             my_selection_res = requests.get(
                 f"{get_base_url()}/lol-champ-select/v1/session/my-selection",
@@ -104,6 +140,7 @@ def execute_preselect_intent(champion_name, champion_id, log_errors=True):
             if (
                 current_intent == champion_id
                 or current_champion == champion_id
+                or action_pick_champion == champion_id
                 or my_selection.get("championPickIntent") == champion_id
                 or my_selection.get("championId") == champion_id
             ):
@@ -114,13 +151,16 @@ def execute_preselect_intent(champion_name, champion_id, log_errors=True):
             log_and_discord(
                 f"❌ Preselect intent did not stick for {champion_name}. "
                 f"PATCH statuses: championPickIntent={intent_res.status_code}, "
-                f"intentChampionId={intent_legacy_res.status_code}, championId={champion_res.status_code}. "
-                f"Session state: championPickIntent={current_intent}, championId={current_champion}. "
+                f"intentChampionId={intent_legacy_res.status_code}, championId={champion_res.status_code}, "
+                f"actionPick={action_res.status_code if action_res else 'n/a'}. "
+                f"Session state: championPickIntent={current_intent}, championId={current_champion}, "
+                f"pickActionChampionId={action_pick_champion}, pickActionId={action_id}. "
                 f"My-selection[{my_selection_status}]: "
                 f"championPickIntent={my_selection.get('championPickIntent')}, "
                 f"championId={my_selection.get('championId')}. "
                 f"Responses: championPickIntent='{intent_res.text}', "
-                f"intentChampionId='{intent_legacy_res.text}', championId='{champion_res.text}'"
+                f"intentChampionId='{intent_legacy_res.text}', championId='{champion_res.text}', "
+                f"actionPick='{action_res.text if action_res else ''}'"
             )
         return False
     except Exception as e:
