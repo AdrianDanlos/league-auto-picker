@@ -131,10 +131,10 @@ def pick_and_ban(config, preferred_role_override=None):
             if not is_early_default_intent_sent and early_default_pick and early_default_pick_id:
                 early_intent_attempts += 1
                 if execute_preselect_intent(
-                    early_default_pick, early_default_pick_id, log_errors=False
+                    early_default_pick, early_default_pick_id, log_errors=True
                 ):
                     print(
-                        f"🎯 Early preselected {early_default_pick} for {preferred_lane_key} "
+                        f"🎯 Early preselect intent confirmed for {early_default_pick} ({preferred_lane_key}) "
                         f"(attempt {early_intent_attempts})"
                     )
                     is_early_default_intent_sent = True
@@ -210,10 +210,10 @@ def pick_and_ban(config, preferred_role_override=None):
                                             if execute_preselect_intent(
                                                 early_default_pick,
                                                 early_default_pick_id,
-                                                log_errors=False,
+                                                log_errors=True,
                                             ):
                                                 print(
-                                                    f"🎯 Fallback preselected {early_default_pick} "
+                                                    f"🎯 Fallback preselect intent confirmed for {early_default_pick} "
                                                     "right after ban."
                                                 )
                                                 is_early_default_intent_sent = True
