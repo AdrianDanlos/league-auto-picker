@@ -3,6 +3,11 @@ import time
 
 from utils.logger import log_and_discord
 from utils import get_auth, get_base_url, get_session, LeagueClientDisconnected
+from utils import shared_state
+from features.session_lane_prompt import (
+    prompt_session_lane_selection,
+    dismiss_lane_prompt_for_game_found,
+)
 
 
 def accept_queue():
@@ -30,6 +35,7 @@ def accept_queue():
                     # In queue: state invalid
                     elif state in ["None", "Invalid"]:
                         print("🟢 Waiting for queue pop...")
+                        prompt_session_lane_selection(shared_state.config_preferred_role)
                     else:
                         print(f"🔄 Queue state: {state}. Waiting...")
                     last_state = state
@@ -55,6 +61,7 @@ def accept_queue():
 
                         # Check if champ select has started
                         if get_session():
+                            dismiss_lane_prompt_for_game_found()
                             print("🎮 Champion select started!")
                             return
 

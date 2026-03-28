@@ -45,7 +45,7 @@ More information about the `config.json` file:
 
 **Summoner spells**: You can set default summoner spells for each role, and override them by specifying champion-specific summoner spells for that role.
 
-**Messages**: You can define multiple messages and the bot will randomly select one to send whenever the champ select starts. If the messages are empty it will by default send the message: 'hey happy friday' (in case today is friday)
+**Messages**: You can define multiple messages and the bot will randomly select one to send during champ select. If the messages list is empty, the bot skips sending a chat message.
 
 ## Summoner Spell IDs
 

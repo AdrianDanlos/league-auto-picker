@@ -18,7 +18,6 @@ from features.swap_pick_position import swap_pick_position
 from features.send_chat_message import schedule_champ_select_message
 from features.post_game.post_game_utils import save_pre_game_lp
 from features.session_lane_prompt import (
-    prompt_session_lane_selection,
     consume_session_preferred_role,
 )
 from utils import (
@@ -183,7 +182,6 @@ def main():
                 save_pre_game_lp(shared_state.current_queue_type)
 
                 schedule_champ_select_message(session)
-                prompt_session_lane_selection(config.get("preferred_role"))
                 session_preferred_role = consume_session_preferred_role(
                     config.get("preferred_role"), wait_for_selection_seconds=8
                 )
