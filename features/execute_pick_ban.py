@@ -50,7 +50,7 @@ def execute_preselect(action, champion_name, champion_id):
 
 
 @handle_connection_errors
-def execute_preselect_intent(champion_name, champion_id):
+def execute_preselect_intent(champion_name, champion_id, log_errors=True):
     """Set hover intent via my-selection, even before pick turn."""
     try:
         res = requests.patch(
@@ -62,12 +62,14 @@ def execute_preselect_intent(champion_name, champion_id):
         if res.status_code == 204:
             return True
         else:
-            log_and_discord(
-                f"❌ Failed to set preselect intent for {champion_name}: {res.status_code}"
-            )
+            if log_errors:
+                log_and_discord(
+                    f"❌ Failed to set preselect intent for {champion_name}: {res.status_code}"
+                )
             return False
     except Exception as e:
-        log_and_discord(f"❌ Error setting preselect intent for {champion_name}: {e}")
+        if log_errors:
+            log_and_discord(f"❌ Error setting preselect intent for {champion_name}: {e}")
         return False
 
 

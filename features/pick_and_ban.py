@@ -29,6 +29,19 @@ from features.execute_pick_ban import (
 from features.discord_message import create_discord_message
 
 
+def normalize_lane_key(role):
+    """Normalize lane names/aliases to config keys."""
+    role_key = str(role or "").strip().upper()
+    aliases = {
+        "MID": "MIDDLE",
+        "SUP": "UTILITY",
+        "SUPPORT": "UTILITY",
+        "ADC": "BOTTOM",
+        "BOT": "BOTTOM",
+    }
+    return aliases.get(role_key, role_key)
+
+
 def pick_and_ban(config, preferred_role_override=None):
     """
     Continuously monitors the League of Legends champion select session and automates the pick and ban process.
@@ -85,6 +98,9 @@ def pick_and_ban(config, preferred_role_override=None):
 
     is_champion_preselected = False
     is_early_default_intent_sent = False
+    post_ban_fallback_attempted = False
+    early_intent_attempts = 0
+    skip_reason_logged = False
 
     while True:
         try:
@@ -97,19 +113,50 @@ def pick_and_ban(config, preferred_role_override=None):
             CHAMPION_IDS = fetch_champion_ids()
             actions = session.get("actions", [])
             my_cell_id = session.get("localPlayerCellId")
-            assigned_lane = get_assigned_lane(session)
-            if not assigned_lane:
-                log_and_discord("Could not determine assigned lane.")
-                time.sleep(4)
-                continue
-            lane_key = assigned_lane.upper()
+            preferred_lane_key = normalize_lane_key(
+                preferred_role_override or config.get("preferred_role", "")
+            )
+
+            default_picks_for_preferred_role = (
+                config.get("picks", {}).get("DEFAULT", {}).get(preferred_lane_key, [])
+            )
+            early_default_pick = (
+                default_picks_for_preferred_role[0]
+                if default_picks_for_preferred_role
+                else None
+            )
+            early_default_pick_id = CHAMPION_IDS.get(early_default_pick)
+
+            # Try to preselect as soon as champ-select session is available.
+            if not is_early_default_intent_sent and early_default_pick and early_default_pick_id:
+                early_intent_attempts += 1
+                if execute_preselect_intent(
+                    early_default_pick, early_default_pick_id, log_errors=False
+                ):
+                    print(
+                        f"🎯 Early preselected {early_default_pick} for {preferred_lane_key} "
+                        f"(attempt {early_intent_attempts})"
+                    )
+                    is_early_default_intent_sent = True
+                elif early_intent_attempts == 1:
+                    print(
+                        "⏳ Early preselect intent not accepted yet. "
+                        "Will retry and fallback after ban if needed."
+                    )
+            elif not skip_reason_logged and not is_early_default_intent_sent:
+                if not early_default_pick:
+                    print(
+                        f"⚠️ Skipping early preselect: no DEFAULT pick for role {preferred_lane_key}."
+                    )
+                elif not early_default_pick_id:
+                    print(
+                        f"⚠️ Skipping early preselect: champion ID not found for {early_default_pick}."
+                    )
+                skip_reason_logged = True
 
             # Get current phase from timer
             timer = session.get("timer", {})
             current_phase = timer.get("phase", "").upper()
-            preferred_lane_key = str(
-                preferred_role_override or config.get("preferred_role", "")
-            ).upper()
 
             # Only proceed if we're in a relevant phase
             if not current_phase or current_phase not in ["BAN_PICK", "FINALIZATION"]:
@@ -117,24 +164,12 @@ def pick_and_ban(config, preferred_role_override=None):
                 session = get_session()
                 continue
 
-            # As soon as we enter lobby ban phase, preselect preferred-role default
-            # so teammates can see intent and avoid banning it.
-            if not is_early_default_intent_sent and current_phase == "BAN_PICK":
-                default_picks_for_preferred_role = (
-                    config.get("picks", {})
-                    .get("DEFAULT", {})
-                    .get(preferred_lane_key, [])
-                )
-                if default_picks_for_preferred_role:
-                    early_default_pick = default_picks_for_preferred_role[0]
-                    early_default_pick_id = CHAMPION_IDS.get(early_default_pick)
-                    if early_default_pick_id and execute_preselect_intent(
-                        early_default_pick, early_default_pick_id
-                    ):
-                        print(
-                            f"🎯 Early preselected {early_default_pick} for {preferred_lane_key}"
-                        )
-                        is_early_default_intent_sent = True
+            assigned_lane = get_assigned_lane(session)
+            if not assigned_lane:
+                log_and_discord("Could not determine assigned lane.")
+                time.sleep(4)
+                continue
+            lane_key = assigned_lane.upper()
 
             # Collect all championIds picked (hovered or locked in) by teammates
             my_team_cell_ids = {p["cellId"] for p in session.get("myTeam", [])}
@@ -162,7 +197,30 @@ def pick_and_ban(config, preferred_role_override=None):
                             for champ in champions_to_ban:
                                 champ_id = CHAMPION_IDS.get(champ)
                                 if champ_id and champ_id not in ally_champion_ids:
-                                    execute_ban(action, champ, champ_id)
+                                    if execute_ban(action, champ, champ_id):
+                                        # Fallback path: if early intent could not be set,
+                                        # try one immediate intent right after ban completes.
+                                        if (
+                                            not is_early_default_intent_sent
+                                            and not post_ban_fallback_attempted
+                                            and early_default_pick
+                                            and early_default_pick_id
+                                        ):
+                                            post_ban_fallback_attempted = True
+                                            if execute_preselect_intent(
+                                                early_default_pick,
+                                                early_default_pick_id,
+                                                log_errors=False,
+                                            ):
+                                                print(
+                                                    f"🎯 Fallback preselected {early_default_pick} "
+                                                    "right after ban."
+                                                )
+                                                is_early_default_intent_sent = True
+                                            else:
+                                                print(
+                                                    "⚠️ Post-ban preselect fallback was not accepted."
+                                                )
                                     break
 
                         elif action["type"] == "pick":

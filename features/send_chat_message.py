@@ -2,7 +2,6 @@ import requests
 import random
 import json
 import threading
-import datetime
 
 from utils.logger import log_and_discord
 from utils import get_auth, get_base_url
@@ -13,14 +12,12 @@ def send_champ_select_message(session):
     with open("config.json", "r") as f:
         config = json.load(f)
 
-    current_day = datetime.datetime.now().strftime("%A")
-    default_message = f"hey happy {current_day.lower()}"
+    messages = config.get("messages")
+    if not isinstance(messages, list) or not messages:
+        print("[Chat] No configured messages found. Skipping chat message.")
+        return
 
-    messages = config.get("messages", [])
-    if not messages:
-        message = default_message
-    else:
-        message = random.choice(messages)
+    message = random.choice(messages)
 
     # Try to get the chatId from session
     chat_id = None

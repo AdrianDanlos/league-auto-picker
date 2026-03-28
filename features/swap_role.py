@@ -78,9 +78,10 @@ def swap_role(session, config, preferred_role_override=None):
     # Find a teammate with the preferred role
     swap_target = None
     for participant in my_team:
+        participant_role = str(participant.get("assignedPosition", "")).upper()
         if (
             participant.get("cellId") != my_cell_id
-            and participant.get("assignedPosition") == preferred_role
+            and participant_role == preferred_role
         ):
             swap_target = participant
             break
@@ -139,7 +140,7 @@ def swap_role(session, config, preferred_role_override=None):
 
                 try:
                     # Check current session to see if roles have actually changed
-                    current_role = get_assigned_lane(session)
+                    current_role = str(get_assigned_lane(session) or "").upper()
 
                     # If our role changed to the preferred role, the swap was accepted
                     if current_role == preferred_role and current_role != initial_role:
