@@ -179,6 +179,7 @@ def pick_and_ban(config, preferred_role_override=None):
                     if (
                         action["type"] == "pick"
                         and action["actorCellId"] in my_team_cell_ids
+                        and action["actorCellId"] != my_cell_id
                         and action.get("championId", 0) not in (0, None)
                     ):
                         ally_champion_ids.add(action["championId"])
