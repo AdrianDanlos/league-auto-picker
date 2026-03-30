@@ -143,6 +143,7 @@ def pick_and_ban(config, preferred_role_override=None):
     current_candidate_index = 0
     preselected_pick_name = None
     _, cycle_state, hotkey_handler = _setup_cycle_hotkey(config)
+    autoselect_runes = config.get("autoselect_runes", True)
 
     try:
         while True:
@@ -469,7 +470,12 @@ def pick_and_ban(config, preferred_role_override=None):
 
                             if did_lock:
                                 create_discord_message(best_pick, session)
-                                select_default_runes()
+                                if autoselect_runes:
+                                    select_default_runes()
+                                else:
+                                    print(
+                                        "ℹ️ Rune auto-select disabled in config. Skipping rune setup."
+                                    )
                                 select_summoner_spells(config, best_pick, assigned_lane)
                                 break
                             if lock_attempts > 0:

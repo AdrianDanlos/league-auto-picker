@@ -8,6 +8,7 @@ from features.session_lane_prompt import (
     prompt_session_lane_selection,
     dismiss_lane_prompt_for_game_found,
 )
+from features.discord_message import send_discord_champ_select_started_message
 
 
 def accept_queue():
@@ -65,8 +66,10 @@ def accept_queue():
                         time.sleep(1)
 
                         # Check if champ select has started
-                        if get_session():
+                        session = get_session()
+                        if session:
                             dismiss_lane_prompt_for_game_found()
+                            send_discord_champ_select_started_message(session)
                             print("🎮 Champion select started!")
                             return
 

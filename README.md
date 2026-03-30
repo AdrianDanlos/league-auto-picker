@@ -11,7 +11,7 @@ League Auto Picker is an automation utility programm designed to enhance the Lea
 - 🔄 **Position Swapping**: Handles position and pick order swaps by trying to get your preferred role and pick as late as possible. (Trying to pick as late as possible is only applyable for top and mid)
 - 🛡️ **Auto-Decline Swaps**: Automatically declines incoming swap requests, trades, and position swaps after a couple of seconds
 - 💬 **Communication**: Sends custom messages during the selection phase
-- 🔮 **Smart Runes & Summoner Spells**: Automatically selects optimal runes and summoner spells for your champion
+- 🔮 **Smart Runes & Summoner Spells**: Automatically selects optimal runes and summoner spells for your champion (runes can be toggled off)
 - 📢 **Discord Integration**: Sends detailed pre-game and post-game notifications to Discord
 - 📊 **LP Tracking**: Automatically tracks LP changes before and after games
 - ⚙️ **Configurable**: Easy-to-use configuration system
@@ -51,6 +51,11 @@ More information about the `config.json` file:
 - Press it while your pick is in progress to advance to the next available candidate.
 
 **Summoner spells**: You can set default summoner spells for each role, and override them by specifying champion-specific summoner spells for that role.
+
+**Rune auto-select toggle**:
+
+- Add `autoselect_runes` to `config.json` (example: `"autoselect_runes": true`).
+- Set it to `false` if you do not want the bot to auto-set runes after locking a champion.
 
 **Messages**: You can define multiple messages and the bot will randomly select one to send during champ select. If the messages list is empty, the bot skips sending a chat message.
 

@@ -119,6 +119,27 @@ def send_discord_pre_game_message(game_data):
         log_and_discord(f"❌ Unexpected error sending discord message: {e}")
 
 
+def send_discord_champ_select_started_message(session):
+    """Send a lightweight Discord message when champion select starts."""
+    try:
+        player_name = get_summoner_name(session) or "Player"
+        content = f"Hey {player_name}, champion select started!"
+        response = requests.post(webhook_url, json={"content": content})
+
+        if response.status_code == 204:
+            print("✅ Discord champ select start message sent")
+        else:
+            log_and_discord(
+                f"❌ Error sending champ select start discord message: {response.status_code}"
+            )
+    except LeagueClientDisconnected:
+        return
+    except Exception as e:
+        log_and_discord(
+            f"❌ Unexpected error sending champ select start discord message: {e}"
+        )
+
+
 def build_porofessor_url(region, summoner_name):
     region_converted = region
     if region == "eu1":

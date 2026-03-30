@@ -116,7 +116,15 @@ def validate_config(config):
     if not isinstance(config, dict):
         return ["Top-level config must be a JSON object."], warnings
 
-    required_sections = ["bans", "picks", "summs", "random_mode_active", "preferred_role", "messages"]
+    required_sections = [
+        "bans",
+        "picks",
+        "summs",
+        "random_mode_active",
+        "autoselect_runes",
+        "preferred_role",
+        "messages",
+    ]
     for key in required_sections:
         if key not in config:
             errors.append(f"Missing required config key: '{key}'.")
@@ -141,6 +149,10 @@ def validate_config(config):
     random_mode_active = config.get("random_mode_active")
     if not isinstance(random_mode_active, bool):
         errors.append("'random_mode_active' must be true or false.")
+
+    autoselect_runes = config.get("autoselect_runes")
+    if not isinstance(autoselect_runes, bool):
+        errors.append("'autoselect_runes' must be true or false.")
 
     preferred_role = config.get("preferred_role")
     if not isinstance(preferred_role, str) or not preferred_role.strip():

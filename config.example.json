@@ -241,6 +241,7 @@
     }
   },
   "random_mode_active": true,
+  "autoselect_runes": true,
   "cycle_counter_hotkey": "f8",
   "preferred_role": "middle",
   "messages": []
