@@ -4,6 +4,22 @@ from utils.logger import log_and_discord
 from utils import get_auth, get_base_url, handle_connection_errors
 
 
+def _is_status_ok(status_code):
+    return status_code in (200, 201, 204)
+
+
+def _is_target_page_current(target_page_id):
+    current_page_res = requests.get(
+        f"{get_base_url()}/lol-perks/v1/currentpage",
+        auth=get_auth(),
+        verify=False,
+    )
+    if current_page_res.status_code != 200:
+        return False
+    current_page = current_page_res.json() or {}
+    return current_page.get("id") == target_page_id
+
+
 @handle_connection_errors
 def select_default_runes():
     try:
@@ -22,6 +38,121 @@ def select_default_runes():
 
     except Exception as e:
         log_and_discord(f"❌ Unexpected error setting default runes and summs: {e}")
+
+
+@handle_connection_errors
+def select_configured_runes(config, champion):
+    runes_config = config.get("runes", {})
+    if not isinstance(runes_config, dict):
+        log_and_discord("⚠️ Invalid 'runes' config. Expected an object.")
+        return False
+
+    target_page_name = runes_config.get(champion)
+    if not isinstance(target_page_name, str) or not target_page_name.strip():
+        return False
+
+    target_page_name_normalized = target_page_name.strip().lower()
+
+    try:
+        pages_res = requests.get(
+            f"{get_base_url()}/lol-perks/v1/pages",
+            auth=get_auth(),
+            verify=False,
+        )
+        if pages_res.status_code != 200:
+            log_and_discord(
+                f"⚠️ Could not read rune pages for {champion} "
+                f"(Status: {pages_res.status_code}, {pages_res.text})"
+            )
+            return False
+
+        pages_payload = pages_res.json()
+        pages = (
+            pages_payload.get("pages", [])
+            if isinstance(pages_payload, dict)
+            else pages_payload
+        )
+        if not isinstance(pages, list):
+            log_and_discord("⚠️ Unexpected rune pages response format from LCU.")
+            return False
+
+        target_page = next(
+            (
+                page
+                for page in pages
+                if str(page.get("name", "")).strip().lower() == target_page_name_normalized
+            ),
+            None,
+        )
+        if not target_page:
+            print(
+                f"ℹ️ Rune page '{target_page_name}' for {champion} not found. "
+                "Falling back to recommended runes."
+            )
+            return False
+
+        target_page_id = target_page.get("id")
+        if target_page_id is None:
+            log_and_discord(
+                f"⚠️ Rune page '{target_page_name}' has no id. Falling back to recommended runes."
+            )
+            return False
+
+        current_page_payload = {
+            "id": target_page_id,
+            "name": target_page.get("name", target_page_name),
+            "primaryStyleId": target_page.get("primaryStyleId"),
+            "subStyleId": target_page.get("subStyleId"),
+            "selectedPerkIds": target_page.get("selectedPerkIds", []),
+            "current": True,
+        }
+
+        current_page_res = requests.put(
+            f"{get_base_url()}/lol-perks/v1/currentpage",
+            auth=get_auth(),
+            json=current_page_payload,
+            verify=False,
+        )
+
+        if _is_status_ok(current_page_res.status_code) and _is_target_page_current(
+            target_page_id
+        ):
+            print(
+                f"✅ Successfully selected configured rune page "
+                f"'{target_page.get('name', target_page_name)}' for {champion}"
+            )
+            return True
+
+        page_update_res = requests.put(
+            f"{get_base_url()}/lol-perks/v1/pages/{target_page_id}",
+            auth=get_auth(),
+            json={"current": True},
+            verify=False,
+        )
+
+        if _is_status_ok(page_update_res.status_code) and _is_target_page_current(
+            target_page_id
+        ):
+            print(
+                f"✅ Successfully selected configured rune page "
+                f"'{target_page.get('name', target_page_name)}' for {champion}"
+            )
+            return True
+
+        log_and_discord(
+            f"⚠️ Failed to apply configured rune page '{target_page_name}' for {champion}. "
+            "Falling back to recommended runes. "
+            f"Endpoints: currentpage={current_page_res.status_code}, "
+            f"page_update={page_update_res.status_code}."
+        )
+        return False
+
+    except Exception as e:
+        log_and_discord(
+            f"⚠️ Error selecting configured rune page for {champion}: {e}. "
+            "Falling back to recommended runes."
+        )
+        return False
 
 
 @handle_connection_errors

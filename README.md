@@ -45,6 +45,17 @@ More information about the `config.json` file:
 
 **Summoner spells**: You can set default summoner spells for each role, and override them by specifying champion-specific summoner spells for that role.
 
+**Runes**: You can map champion names to your existing rune page names in `config.json`:
+
+```json
+"runes": {
+  "Annie": "annie_runes",
+  "Graves": "graves_runes"
+}
+```
+
+When a champion is locked in, the script first tries to select the configured rune page by name. If no mapping exists, the page cannot be found, or the client rejects applying it, the script automatically falls back to recommended runes.
+
 **Messages**: You can define multiple messages and the bot will randomly select one to send during champ select. If the messages list is empty, the bot skips sending a chat message.
 
 ## Summoner Spell IDs

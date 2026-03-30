@@ -103,6 +103,20 @@ def _validate_summs(summs, errors):
                 )
 
 
+def _validate_runes(runes, errors):
+    if not isinstance(runes, dict):
+        errors.append("'runes' must be an object mapping champion names to rune page names.")
+        return
+
+    for champion_name, rune_page_name in runes.items():
+        if not isinstance(champion_name, str) or not champion_name.strip():
+            errors.append("'runes' has an invalid champion key.")
+        if not isinstance(rune_page_name, str) or not rune_page_name.strip():
+            errors.append(
+                f"'runes.{champion_name}' must be a non-empty rune page name string."
+            )
+
+
 def validate_config(config):
     """
     Validate config.json shape and core value types.
@@ -137,6 +151,8 @@ def validate_config(config):
         )
 
     _validate_summs(config.get("summs"), errors)
+    if "runes" in config:
+        _validate_runes(config.get("runes"), errors)
 
     random_mode_active = config.get("random_mode_active")
     if not isinstance(random_mode_active, bool):
