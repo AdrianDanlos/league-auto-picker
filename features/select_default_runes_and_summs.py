@@ -1,3 +1,5 @@
+import time
+
 import requests
 
 from utils.logger import log_and_discord
@@ -8,36 +10,92 @@ def _is_status_ok(status_code):
     return status_code in (200, 201, 204)
 
 
-def _is_target_page_current(target_page_id):
+def _get_current_page():
     current_page_res = requests.get(
         f"{get_base_url()}/lol-perks/v1/currentpage",
         auth=get_auth(),
         verify=False,
     )
     if current_page_res.status_code != 200:
+        return None
+    return current_page_res.json() or {}
+
+
+def _page_signature(page):
+    if not isinstance(page, dict):
+        return None
+    return (
+        page.get("id"),
+        tuple(page.get("selectedPerkIds", []) or []),
+        page.get("primaryStyleId"),
+        page.get("subStyleId"),
+    )
+
+
+def _is_rune_page_populated(page):
+    if not isinstance(page, dict):
         return False
-    current_page = current_page_res.json() or {}
+    selected_perks = page.get("selectedPerkIds", []) or []
+    # A usable rune page should include at least keystone + minor + stat perks.
+    return (
+        isinstance(selected_perks, list)
+        and len(selected_perks) >= 9
+        and page.get("primaryStyleId") is not None
+        and page.get("subStyleId") is not None
+    )
+
+
+def _is_target_page_current(target_page_id):
+    current_page = _get_current_page()
+    if not current_page:
+        return False
     return current_page.get("id") == target_page_id
 
 
 @handle_connection_errors
 def select_default_runes():
     try:
-        response = requests.post(
-            f"{get_base_url()}/lol-perks/v1/rune-recommender-auto-select",
-            auth=get_auth(),
-            verify=False,
-        )
+        max_attempts = 4
+        before_page = _get_current_page()
+        before_signature = _page_signature(before_page)
+        latest_status = None
+        latest_body = ""
 
-        if response.status_code == 200 or response.status_code == 204:
-            print("✅ Successfully set current rune page to reccommended one")
-        else:
-            log_and_discord(
-                f"❌ Failed to set current rune page to reccomended one (Status: {response.status_code}, {response.text})"
+        for attempt in range(1, max_attempts + 1):
+            response = requests.post(
+                f"{get_base_url()}/lol-perks/v1/rune-recommender-auto-select",
+                auth=get_auth(),
+                verify=False,
             )
+            latest_status = response.status_code
+            latest_body = response.text
+            if not _is_status_ok(response.status_code):
+                break
+
+            # Recommender can respond before the page has actually been populated.
+            time.sleep(0.6)
+            after_page = _get_current_page()
+            after_signature = _page_signature(after_page)
+
+            if _is_rune_page_populated(after_page) and (
+                after_signature != before_signature or before_signature is None
+            ):
+                print("✅ Successfully set current rune page to recommended one")
+                return True
+
+            if attempt < max_attempts:
+                time.sleep(0.4)
+
+        log_and_discord(
+            "❌ Failed to set recommended rune page. "
+            f"(Status: {latest_status}, Body: {latest_body}) "
+            "LCU may acknowledge the request but keep runes empty/unapplied in this champ-select state."
+        )
+        return False
 
     except Exception as e:
         log_and_discord(f"❌ Unexpected error setting default runes and summs: {e}")
+        return False
 
 
 @handle_connection_errors
