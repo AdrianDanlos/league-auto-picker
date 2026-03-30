@@ -424,11 +424,58 @@ def pick_and_ban(config, preferred_role_override=None):
 
                             print(f"Picking {best_pick}")
                             champ_id = CHAMPION_IDS.get(best_pick)
-                            if execute_pick(action, best_pick, champ_id):
+                            if not champ_id:
+                                log_and_discord(
+                                    f"⚠️ Missing champion ID for {best_pick}. Cannot lock pick."
+                                )
+                                continue
+
+                            lock_deadline = time.time() + 6.0
+                            lock_attempts = 0
+                            did_lock = False
+                            while time.time() < lock_deadline:
+                                current_session = get_session()
+                                if not current_session:
+                                    break
+
+                                my_cell_id = current_session.get("localPlayerCellId")
+                                if not is_still_our_turn_to_pick(
+                                    current_session, my_cell_id
+                                ):
+                                    break
+
+                                current_pick_action = None
+                                for action_group in current_session.get("actions", []):
+                                    for current_action in action_group:
+                                        if (
+                                            current_action.get("actorCellId")
+                                            == my_cell_id
+                                            and current_action.get("isInProgress")
+                                            and current_action.get("type") == "pick"
+                                        ):
+                                            current_pick_action = current_action
+                                            break
+                                    if current_pick_action:
+                                        break
+
+                                if not current_pick_action:
+                                    break
+
+                                lock_attempts += 1
+                                if execute_pick(current_pick_action, best_pick, champ_id):
+                                    did_lock = True
+                                    break
+                                time.sleep(0.2)
+
+                            if did_lock:
                                 create_discord_message(best_pick, session)
                                 select_default_runes()
                                 select_summoner_spells(config, best_pick, assigned_lane)
                                 break
+                            if lock_attempts > 0:
+                                log_and_discord(
+                                    f"⚠️ Lock-in retries exhausted for {best_pick} after {lock_attempts} attempts."
+                                )
 
             # Wait 4 seconds before next iteration
             time.sleep(4)
