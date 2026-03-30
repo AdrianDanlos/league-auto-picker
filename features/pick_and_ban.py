@@ -343,7 +343,8 @@ def pick_and_ban(config, preferred_role_override=None):
                                     is_champion_preselected = True
                                     preselected_pick_name = best_pick
                                     print(
-                                        f"🎯 Preselected {best_pick}, will lock in when timer is low..."
+                                        f"🎯 Preselected {best_pick}, will lock in when timer is low... "
+                                        f"(press {str(config.get('cycle_counter_hotkey', 'f8')).upper()} to cycle counters)"
                                     )
                                 else:
                                     print(
