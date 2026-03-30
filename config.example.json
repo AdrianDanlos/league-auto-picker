@@ -240,10 +240,6 @@
       }
     }
   },
-  "runes": {
-    "Annie": "annie_runes",
-    "Graves": "graves_runes"
-  },
   "random_mode_active": true,
   "preferred_role": "middle",
   "messages": []

@@ -2,7 +2,6 @@ import time
 
 from constants import PICK_TIME_LEFT_MS
 from features.select_default_runes_and_summs import (
-    select_configured_runes,
     select_default_runes,
     select_summoner_spells,
 )
@@ -317,11 +316,7 @@ def pick_and_ban(config, preferred_role_override=None):
                             champ_id = CHAMPION_IDS.get(best_pick)
                             if execute_pick(action, best_pick, champ_id):
                                 create_discord_message(best_pick, session)
-                                configured_runes_selected = select_configured_runes(
-                                    config, best_pick
-                                )
-                                if not configured_runes_selected:
-                                    select_default_runes()
+                                select_default_runes()
                                 select_summoner_spells(config, best_pick, assigned_lane)
                                 break
 
