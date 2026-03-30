@@ -11,6 +11,7 @@ from utils import get_session, LeagueClientDisconnected
 from utils import (
     fetch_champion_ids,
     fetch_champion_names,
+    get_owned_champion_ids,
     is_champion_locked_in,
     get_locked_in_champion,
 )
@@ -138,6 +139,7 @@ def pick_and_ban(config, preferred_role_override=None):
     post_ban_fallback_attempted = False
     early_intent_attempts = 0
     skip_reason_logged = False
+    ownership_warning_logged = False
     active_pick_action_id = None
     pick_candidates = []
     current_candidate_index = 0
@@ -154,6 +156,15 @@ def pick_and_ban(config, preferred_role_override=None):
                 return
 
             CHAMPION_IDS = fetch_champion_ids()
+            owned_champion_ids = get_owned_champion_ids()
+            if not owned_champion_ids and not ownership_warning_logged:
+                log_and_discord(
+                    "⚠️ No owned champions found for the current account. "
+                    "All pick candidates will be filtered out until ownership data is available."
+                )
+                ownership_warning_logged = True
+            elif owned_champion_ids:
+                ownership_warning_logged = False
             actions = session.get("actions", [])
             my_cell_id = session.get("localPlayerCellId")
             preferred_lane_key = normalize_lane_key(
@@ -169,9 +180,17 @@ def pick_and_ban(config, preferred_role_override=None):
                 else None
             )
             early_default_pick_id = CHAMPION_IDS.get(early_default_pick)
+            has_owned_default_preselect = bool(
+                early_default_pick_id and early_default_pick_id in owned_champion_ids
+            )
 
             # Try to preselect as soon as champ-select session is available.
-            if not is_early_default_intent_sent and early_default_pick and early_default_pick_id:
+            if (
+                not is_early_default_intent_sent
+                and early_default_pick
+                and early_default_pick_id
+                and has_owned_default_preselect
+            ):
                 early_intent_attempts += 1
                 if execute_preselect_intent(
                     early_default_pick, early_default_pick_id, log_errors=True
@@ -194,6 +213,10 @@ def pick_and_ban(config, preferred_role_override=None):
                 elif not early_default_pick_id:
                     print(
                         f"⚠️ Skipping early preselect: champion ID not found for {early_default_pick}."
+                    )
+                elif not has_owned_default_preselect:
+                    print(
+                        f"⚠️ Skipping early preselect: {early_default_pick} is not owned on this account."
                     )
                 skip_reason_logged = True
 
@@ -249,6 +272,7 @@ def pick_and_ban(config, preferred_role_override=None):
                                             and not post_ban_fallback_attempted
                                             and early_default_pick
                                             and early_default_pick_id
+                                            and has_owned_default_preselect
                                         ):
                                             post_ban_fallback_attempted = True
                                             if execute_preselect_intent(
@@ -285,6 +309,7 @@ def pick_and_ban(config, preferred_role_override=None):
                                     ally_champion_ids,
                                     banned_champions_ids,
                                     CHAMPION_IDS,
+                                    owned_champion_ids,
                                 )
                             except Exception as e:
                                 log_and_discord(f"⚠️ Error in pick logic: {e}")

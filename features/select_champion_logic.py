@@ -3,12 +3,25 @@ from utils.logger import log_and_discord
 from utils import is_champion_available
 
 
+def _merge_candidates(ranked_counter_candidates, default_candidates):
+    """Merge candidates preserving order and removing duplicates."""
+    merged_candidates = []
+    seen = set()
+    for champ in ranked_counter_candidates + default_candidates:
+        if champ in seen:
+            continue
+        seen.add(champ)
+        merged_candidates.append(champ)
+    return merged_candidates
+
+
 def get_ranked_counter_candidates(
     enemy_champions,
     lane_picks_config,
     ally_champion_ids,
     banned_champions_ids,
     champion_ids,
+    owned_champion_ids=None,
 ):
     """Return available counter candidates globally ranked from best to worst."""
     if not enemy_champions:
@@ -32,9 +45,10 @@ def get_ranked_counter_candidates(
                     banned_champions_ids,
                     enemy_champions,
                     champion_ids,
+                    owned_champion_ids,
                 ):
                     print(
-                        f"Skipping {counter_champ} - not available (prepicked, banned, or picked by enemies)"
+                        f"Skipping {counter_champ} - not available (ownership, prepicked, banned, or picked by enemies)"
                     )
                     continue
 
@@ -72,6 +86,7 @@ def get_available_default_picks(
     banned_champions_ids,
     enemy_champions,
     champion_ids,
+    owned_champion_ids=None,
 ):
     """Return available DEFAULT picks in configured order."""
     default_picks = config.get("picks", {}).get("DEFAULT", {}).get(lane_key, [])
@@ -83,6 +98,7 @@ def get_available_default_picks(
             banned_champions_ids,
             enemy_champions,
             champion_ids,
+            owned_champion_ids,
         ):
             available_defaults.append(default_champ)
     return available_defaults
@@ -96,17 +112,40 @@ def build_pick_candidates(
     ally_champion_ids,
     banned_champions_ids,
     champion_ids,
+    owned_champion_ids=None,
 ):
     """
     Build ordered pick candidates:
     ranked counters first, then DEFAULT picks in order.
     """
+    ranked_counter_candidates_without_ownership = []
+    default_candidates_without_ownership = []
+    if owned_champion_ids is not None:
+        ranked_counter_candidates_without_ownership = get_ranked_counter_candidates(
+            enemy_champions,
+            lane_picks_config,
+            ally_champion_ids,
+            banned_champions_ids,
+            champion_ids,
+            None,
+        )
+        default_candidates_without_ownership = get_available_default_picks(
+            config,
+            lane_key,
+            ally_champion_ids,
+            banned_champions_ids,
+            enemy_champions,
+            champion_ids,
+            None,
+        )
+
     ranked_counter_candidates = get_ranked_counter_candidates(
         enemy_champions,
         lane_picks_config,
         ally_champion_ids,
         banned_champions_ids,
         champion_ids,
+        owned_champion_ids,
     )
 
     default_candidates = get_available_default_picks(
@@ -116,15 +155,24 @@ def build_pick_candidates(
         banned_champions_ids,
         enemy_champions,
         champion_ids,
+        owned_champion_ids,
     )
 
-    merged_candidates = []
-    seen = set()
-    for champ in ranked_counter_candidates + default_candidates:
-        if champ in seen:
-            continue
-        seen.add(champ)
-        merged_candidates.append(champ)
+    merged_candidates = _merge_candidates(ranked_counter_candidates, default_candidates)
+
+    if owned_champion_ids is not None:
+        merged_without_ownership = _merge_candidates(
+            ranked_counter_candidates_without_ownership,
+            default_candidates_without_ownership,
+        )
+        ownership_excluded = [
+            champ for champ in merged_without_ownership if champ not in merged_candidates
+        ]
+        if ownership_excluded:
+            print(
+                "🚫 Excluded by ownership (not owned on this account): "
+                f"{ownership_excluded}"
+            )
 
     print(f"Final ordered pick candidates: {merged_candidates}")
     return merged_candidates
@@ -136,6 +184,7 @@ def find_best_counter_pick(
     ally_champion_ids,
     banned_champions_ids,
     champion_ids,
+    owned_champion_ids=None,
 ):
     """Find the best counter-pick based on enemy champions."""
     ranked_candidates = get_ranked_counter_candidates(
@@ -144,6 +193,7 @@ def find_best_counter_pick(
         ally_champion_ids,
         banned_champions_ids,
         champion_ids,
+        owned_champion_ids,
     )
     best_pick = ranked_candidates[0] if ranked_candidates else None
     print(f"Final best pick: {best_pick}")
@@ -157,6 +207,7 @@ def select_default_pick(
     banned_champions_ids,
     enemy_champions,
     champion_ids,
+    owned_champion_ids=None,
 ):
     """Select a default pick when no counter-pick is available."""
     print("No counter pick found")
@@ -174,6 +225,7 @@ def select_default_pick(
                 banned_champions_ids,
                 enemy_champions,
                 champion_ids,
+                owned_champion_ids,
             ):
                 print(f"Available default: {default_champ}")
                 available_defaults.append(default_champ)
