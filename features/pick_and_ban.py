@@ -51,6 +51,13 @@ def _consume_cycle_request(cycle_state):
     return True
 
 
+def _next_candidate_index(current_index, total_candidates):
+    """Return the next candidate index, wrapping back to start."""
+    if total_candidates <= 0:
+        return 0
+    return (current_index + 1) % total_candidates
+
+
 def _setup_cycle_hotkey(config):
     """Register a global hotkey used to cycle pick candidates."""
     hotkey = str(config.get("cycle_counter_hotkey", "f8")).strip() or "f8"
@@ -308,8 +315,9 @@ def pick_and_ban(config, preferred_role_override=None):
                             if _consume_cycle_request(cycle_state):
                                 if pick_candidates:
                                     previous_index = current_candidate_index
-                                    if current_candidate_index < len(pick_candidates) - 1:
-                                        current_candidate_index += 1
+                                    current_candidate_index = _next_candidate_index(
+                                        current_candidate_index, len(pick_candidates)
+                                    )
                                     cycled_pick = pick_candidates[current_candidate_index]
                                     if current_candidate_index != previous_index:
                                         is_champion_preselected = False
@@ -374,8 +382,9 @@ def pick_and_ban(config, preferred_role_override=None):
                                         continue
 
                                     previous_index = current_candidate_index
-                                    if current_candidate_index < len(pick_candidates) - 1:
-                                        current_candidate_index += 1
+                                    current_candidate_index = _next_candidate_index(
+                                        current_candidate_index, len(pick_candidates)
+                                    )
                                     best_pick = pick_candidates[current_candidate_index]
 
                                     if current_candidate_index != previous_index:
