@@ -3,6 +3,133 @@ from utils.logger import log_and_discord
 from utils import is_champion_available
 
 
+def get_ranked_counter_candidates(
+    enemy_champions,
+    lane_picks_config,
+    ally_champion_ids,
+    banned_champions_ids,
+    champion_ids,
+):
+    """Return available counter candidates globally ranked from best to worst."""
+    if not enemy_champions:
+        return []
+
+    ranked_hits = []
+    for enemy_order, enemy_champ in enumerate(enemy_champions):
+        print(f"Checking enemy champion: {enemy_champ}")
+        found_counter = False
+        for counter_order, (counter_champ, counter_list) in enumerate(
+            lane_picks_config.items()
+        ):
+            if enemy_champ not in counter_list:
+                continue
+
+            found_counter = True
+            try:
+                if not is_champion_available(
+                    counter_champ,
+                    ally_champion_ids,
+                    banned_champions_ids,
+                    enemy_champions,
+                    champion_ids,
+                ):
+                    print(
+                        f"Skipping {counter_champ} - not available (prepicked, banned, or picked by enemies)"
+                    )
+                    continue
+
+                enemy_index = counter_list.index(enemy_champ)
+                ranked_hits.append(
+                    (enemy_index, enemy_order, counter_order, counter_champ)
+                )
+            except Exception as e:
+                log_and_discord(
+                    f"⚠️ Error in is_champion_available for {counter_champ}: {e}"
+                )
+                continue
+
+        if not found_counter:
+            print(f"No counter found for enemy champion: {enemy_champ}")
+
+    ranked_hits.sort(key=lambda item: (item[0], item[1], item[2]))
+
+    ranked_candidates = []
+    seen = set()
+    for _, _, _, counter_champ in ranked_hits:
+        if counter_champ in seen:
+            continue
+        seen.add(counter_champ)
+        ranked_candidates.append(counter_champ)
+
+    print(f"Ranked counter candidates: {ranked_candidates}")
+    return ranked_candidates
+
+
+def get_available_default_picks(
+    config,
+    lane_key,
+    ally_champion_ids,
+    banned_champions_ids,
+    enemy_champions,
+    champion_ids,
+):
+    """Return available DEFAULT picks in configured order."""
+    default_picks = config.get("picks", {}).get("DEFAULT", {}).get(lane_key, [])
+    available_defaults = []
+    for default_champ in default_picks:
+        if is_champion_available(
+            default_champ,
+            ally_champion_ids,
+            banned_champions_ids,
+            enemy_champions,
+            champion_ids,
+        ):
+            available_defaults.append(default_champ)
+    return available_defaults
+
+
+def build_pick_candidates(
+    config,
+    lane_key,
+    enemy_champions,
+    lane_picks_config,
+    ally_champion_ids,
+    banned_champions_ids,
+    champion_ids,
+):
+    """
+    Build ordered pick candidates:
+    ranked counters first, then DEFAULT picks in order.
+    """
+    ranked_counter_candidates = get_ranked_counter_candidates(
+        enemy_champions,
+        lane_picks_config,
+        ally_champion_ids,
+        banned_champions_ids,
+        champion_ids,
+    )
+
+    default_candidates = get_available_default_picks(
+        config,
+        lane_key,
+        ally_champion_ids,
+        banned_champions_ids,
+        enemy_champions,
+        champion_ids,
+    )
+
+    merged_candidates = []
+    seen = set()
+    for champ in ranked_counter_candidates + default_candidates:
+        if champ in seen:
+            continue
+        seen.add(champ)
+        merged_candidates.append(champ)
+
+    print(f"Final ordered pick candidates: {merged_candidates}")
+    return merged_candidates
+
+
 def find_best_counter_pick(
     enemy_champions,
     lane_picks_config,
@@ -11,62 +138,14 @@ def find_best_counter_pick(
     champion_ids,
 ):
     """Find the best counter-pick based on enemy champions."""
-    if not enemy_champions:
-        return None
-
-    best_pick = None
-    earliest_position = float("inf")
-
-    # Check each enemy champion
-    for enemy_champ in enemy_champions:
-        print(f"Checking enemy champion: {enemy_champ}")
-        # Search through all lane configs to find which champion has this enemy as a counter
-        try:
-            found_counter = False
-            for counter_champ, counter_list in lane_picks_config.items():
-                if enemy_champ in counter_list:
-                    found_counter = True
-                    print(
-                        f"Found {enemy_champ} in counter list for {counter_champ}"
-                    )
-                    # Found the enemy champion in this counter list
-                    enemy_index = counter_list.index(enemy_champ)
-
-                    try:
-                        if not is_champion_available(
-                            counter_champ,
-                            ally_champion_ids,
-                            banned_champions_ids,
-                            enemy_champions,
-                            champion_ids,
-                        ):
-                            print(
-                                f"Skipping {counter_champ} - not available (prepicked, banned, or picked by enemies)"
-                            )
-                            continue
-
-                        # Check if any matchups are even more favorable
-                        if enemy_index < earliest_position:
-                            print(
-                                f"New best pick found! {counter_champ} (enemy at position {enemy_index})"
-                            )
-                            best_pick = counter_champ
-                            earliest_position = enemy_index
-                    except Exception as e:
-                        log_and_discord(
-                            f"⚠️ Error in is_champion_available for {counter_champ}: {e}"
-                        )
-                        continue
-
-            if not found_counter:
-                print(f"No counter found for enemy champion: {enemy_champ}")
-
-        except Exception as e:
-            log_and_discord(
-                f"⚠️ Error in counter-pick iteration: {e}\n ⚠️ Lane picks config: {lane_picks_config}"
-            )
-            return None
-
+    ranked_candidates = get_ranked_counter_candidates(
+        enemy_champions,
+        lane_picks_config,
+        ally_champion_ids,
+        banned_champions_ids,
+        champion_ids,
+    )
+    best_pick = ranked_candidates[0] if ranked_candidates else None
     print(f"Final best pick: {best_pick}")
     return best_pick
 

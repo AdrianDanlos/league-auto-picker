@@ -164,4 +164,14 @@ def validate_config(config):
             "No chat messages configured. Champ-select message sending will be skipped."
         )
 
+    if "cycle_counter_hotkey" in config:
+        cycle_counter_hotkey = config.get("cycle_counter_hotkey")
+        if (
+            not isinstance(cycle_counter_hotkey, str)
+            or not cycle_counter_hotkey.strip()
+        ):
+            errors.append(
+                "'cycle_counter_hotkey' must be a non-empty string (example: 'f8')."
+            )
+
     return errors, warnings

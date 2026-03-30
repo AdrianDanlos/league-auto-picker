@@ -5,6 +5,7 @@ League Auto Picker is an automation utility programm designed to enhance the Lea
 ## Features
 
 - 🤖 **Automated Champion Selection**: Automatically picks champions based on your preferences and counter picks
+- 🔁 **Manual Counter Cycling**: Press a hotkey during your pick turn to move from best counter to 2nd/3rd options, then fall back to defaults
 - 🚫 **Smart Banning**: Automatically bans specified champions
 - ⚡ **Queue Management**: Automatically accepts queue pops
 - 🔄 **Position Swapping**: Handles position and pick order swaps by trying to get your preferred role and pick as late as possible. (Trying to pick as late as possible is only applyable for top and mid)
@@ -39,9 +40,15 @@ More information about the `config.json` file:
 
 **Picks Section**: The bot follows this priority order when picking champions:
 
-1. First, it checks if any enemy picked a champion you have a counter for and selects your counter pick (if multiple champions can counter the same enemy, it picks the one where that enemy appears earliest in your counter list)
-2. If no counters apply, it picks from your "DEFAULT" list for that role (Useful when you always want to pick a specific champion in case we are blindpicking)
-3. If "random_mode_active" is true, it randomly selects from your "RANDOM_MODE" pool instead of using the first default champion. (Useful to be able to play a variety of champions whenever we are blindpicking)
+1. First, it builds a ranked counter list from best to worst (global ranking based on matchup position in your counter lists)
+2. During your pick turn, press the configured `cycle_counter_hotkey` (default: `f8`) to move to the next ranked counter
+3. After counters are exhausted, cycling continues through your "DEFAULT" list for that role in order
+4. If "random_mode_active" is true, it randomly selects from your "RANDOM_MODE" pool instead of using the first default champion. (Useful to be able to play a variety of champions whenever we are blindpicking)
+
+**Manual counter cycling hotkey**:
+
+- Add `cycle_counter_hotkey` to `config.json` (example: `"cycle_counter_hotkey": "f8"`).
+- Press it while your pick is in progress to advance to the next available candidate.
 
 **Summoner spells**: You can set default summoner spells for each role, and override them by specifying champion-specific summoner spells for that role.
 

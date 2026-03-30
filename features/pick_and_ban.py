@@ -1,4 +1,5 @@
 import time
+import keyboard
 
 from constants import PICK_TIME_LEFT_MS
 from features.select_default_runes_and_summs import (
@@ -19,7 +20,7 @@ from utils import (
     get_banned_champion_ids,
     is_still_our_turn_to_pick,
 )
-from features.select_champion_logic import find_best_counter_pick, select_default_pick
+from features.select_champion_logic import build_pick_candidates
 from features.execute_pick_ban import (
     execute_ban,
     execute_pick,
@@ -40,6 +41,35 @@ def normalize_lane_key(role):
         "BOT": "BOTTOM",
     }
     return aliases.get(role_key, role_key)
+
+
+def _consume_cycle_request(cycle_state):
+    """Consume one queued cycle request from the hotkey callback."""
+    if not cycle_state["requested"]:
+        return False
+    cycle_state["requested"] = False
+    return True
+
+
+def _setup_cycle_hotkey(config):
+    """Register a global hotkey used to cycle pick candidates."""
+    hotkey = str(config.get("cycle_counter_hotkey", "f8")).strip() or "f8"
+    cycle_state = {"requested": False}
+    hotkey_handler = None
+
+    def _request_cycle():
+        cycle_state["requested"] = True
+
+    try:
+        hotkey_handler = keyboard.add_hotkey(hotkey, _request_cycle)
+        print(f"⌨️ Counter-cycle hotkey active: {hotkey.upper()}")
+    except Exception as e:
+        log_and_discord(
+            f"⚠️ Could not register cycle counter hotkey '{hotkey}': {e}. "
+            "Counter cycling will be disabled."
+        )
+
+    return hotkey, cycle_state, hotkey_handler
 
 
 def pick_and_ban(config, preferred_role_override=None):
@@ -101,9 +131,14 @@ def pick_and_ban(config, preferred_role_override=None):
     post_ban_fallback_attempted = False
     early_intent_attempts = 0
     skip_reason_logged = False
+    active_pick_action_id = None
+    pick_candidates = []
+    current_candidate_index = 0
+    preselected_pick_name = None
+    _, cycle_state, hotkey_handler = _setup_cycle_hotkey(config)
 
-    while True:
-        try:
+    try:
+        while True:
             session = get_session()
 
             # Check if session is undefined or None
@@ -234,7 +269,9 @@ def pick_and_ban(config, preferred_role_override=None):
 
                                 banned_champions_ids = get_banned_champion_ids(session)
 
-                                best_pick = find_best_counter_pick(
+                                pick_candidates = build_pick_candidates(
+                                    config,
+                                    lane_key,
                                     enemy_champions,
                                     lane_picks_config,
                                     ally_champion_ids,
@@ -243,19 +280,53 @@ def pick_and_ban(config, preferred_role_override=None):
                                 )
                             except Exception as e:
                                 log_and_discord(f"⚠️ Error in pick logic: {e}")
-                                best_pick = None
+                                pick_candidates = []
                                 banned_champions_ids = []  # Fallback to empty list
 
-                            # If no counter-pick found, use DEFAULT
-                            if not best_pick:
-                                best_pick = select_default_pick(
-                                    config,
-                                    lane_key,
-                                    ally_champion_ids,
-                                    banned_champions_ids,
-                                    enemy_champions,
-                                    CHAMPION_IDS,
+                            action_id = action.get("id")
+                            if action_id != active_pick_action_id:
+                                active_pick_action_id = action_id
+                                current_candidate_index = 0
+                                is_champion_preselected = False
+                                preselected_pick_name = None
+
+                            if (
+                                preselected_pick_name
+                                and preselected_pick_name in pick_candidates
+                            ):
+                                current_candidate_index = pick_candidates.index(
+                                    preselected_pick_name
                                 )
+                            elif pick_candidates:
+                                current_candidate_index = min(
+                                    current_candidate_index,
+                                    len(pick_candidates) - 1,
+                                )
+                            else:
+                                current_candidate_index = 0
+
+                            if _consume_cycle_request(cycle_state):
+                                if pick_candidates:
+                                    previous_index = current_candidate_index
+                                    if current_candidate_index < len(pick_candidates) - 1:
+                                        current_candidate_index += 1
+                                    cycled_pick = pick_candidates[current_candidate_index]
+                                    if current_candidate_index != previous_index:
+                                        is_champion_preselected = False
+                                        preselected_pick_name = None
+                                    print(
+                                        f"🔁 Cycle requested. Candidate {current_candidate_index + 1}/{len(pick_candidates)}: {cycled_pick}"
+                                    )
+                                else:
+                                    print(
+                                        "⚠️ Cycle requested but no counter/default candidates are available."
+                                    )
+
+                            best_pick = (
+                                pick_candidates[current_candidate_index]
+                                if pick_candidates
+                                else None
+                            )
 
                             if not best_pick:
                                 log_and_discord(
@@ -270,6 +341,7 @@ def pick_and_ban(config, preferred_role_override=None):
                                 )
                                 if preselect_success:
                                     is_champion_preselected = True
+                                    preselected_pick_name = best_pick
                                     print(
                                         f"🎯 Preselected {best_pick}, will lock in when timer is low..."
                                     )
@@ -289,7 +361,35 @@ def pick_and_ban(config, preferred_role_override=None):
 
                             # Pick when there is 5 seconds left (5000ms) - PICK_TIME_LEFT_MS
                             if sleep_time > 0:
-                                time.sleep(sleep_time)
+                                remaining_sleep = sleep_time
+                                while remaining_sleep > 0:
+                                    interval = min(0.2, remaining_sleep)
+                                    time.sleep(interval)
+                                    remaining_sleep -= interval
+
+                                    if not _consume_cycle_request(cycle_state):
+                                        continue
+                                    if not pick_candidates:
+                                        continue
+
+                                    previous_index = current_candidate_index
+                                    if current_candidate_index < len(pick_candidates) - 1:
+                                        current_candidate_index += 1
+                                    best_pick = pick_candidates[current_candidate_index]
+
+                                    if current_candidate_index != previous_index:
+                                        is_champion_preselected = False
+                                        preselected_pick_name = None
+                                        champ_id_to_preselect = CHAMPION_IDS.get(best_pick)
+                                        preselect_success = execute_preselect(
+                                            action, best_pick, champ_id_to_preselect
+                                        )
+                                        if preselect_success:
+                                            is_champion_preselected = True
+                                            preselected_pick_name = best_pick
+                                        print(
+                                            f"🔁 Cycle requested during wait. Candidate {current_candidate_index + 1}/{len(pick_candidates)}: {best_pick}"
+                                        )
 
                             # Check if already locked in before waiting
                             if is_champion_locked_in():
@@ -323,11 +423,15 @@ def pick_and_ban(config, preferred_role_override=None):
             # Wait 4 seconds before next iteration
             time.sleep(4)
 
-        except KeyboardInterrupt:
-            print("\n🛑 Pick and ban monitoring stopped by user.")
-            break
-        except LeagueClientDisconnected:
-            break
-        except Exception as e:
-            log_and_discord(f"❌ Error in pick and ban loop: {e}")
-            break
+    except KeyboardInterrupt:
+        print("\n🛑 Pick and ban monitoring stopped by user.")
+    except LeagueClientDisconnected:
+        return
+    except Exception as e:
+        log_and_discord(f"❌ Error in pick and ban loop: {e}")
+    finally:
+        if hotkey_handler is not None:
+            try:
+                keyboard.remove_hotkey(hotkey_handler)
+            except Exception:
+                pass
