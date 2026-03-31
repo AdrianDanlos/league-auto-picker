@@ -87,9 +87,12 @@ def get_available_default_picks(
     enemy_champions,
     champion_ids,
     owned_champion_ids=None,
+    default_section_key="DEFAULT",
 ):
-    """Return available DEFAULT picks in configured order."""
-    default_picks = config.get("picks", {}).get("DEFAULT", {}).get(lane_key, [])
+    """Return available fallback picks in configured order."""
+    default_picks = (
+        config.get("picks", {}).get(default_section_key, {}).get(lane_key, [])
+    )
     available_defaults = []
     for default_champ in default_picks:
         if is_champion_available(
@@ -115,9 +118,52 @@ def build_pick_candidates(
     owned_champion_ids=None,
 ):
     """
-    Build ordered pick candidates:
-    ranked counters first, then DEFAULT picks in order.
+    Build ordered pick candidates.
+
+    - random_mode_active = True: use RANDOM_MODE pool only (ignore counters/default)
+    - random_mode_active = False: ranked counters first, then DEFAULT picks
     """
+    random_mode_active = bool(config.get("random_mode_active"))
+
+    if random_mode_active:
+        random_mode_candidates = get_available_default_picks(
+            config,
+            lane_key,
+            ally_champion_ids,
+            banned_champions_ids,
+            enemy_champions,
+            champion_ids,
+            owned_champion_ids,
+            "RANDOM_MODE",
+        )
+        random.shuffle(random_mode_candidates)
+        print(f"🎲 Random mode active. RANDOM_MODE candidates: {random_mode_candidates}")
+
+        if owned_champion_ids is not None:
+            random_mode_candidates_without_ownership = get_available_default_picks(
+                config,
+                lane_key,
+                ally_champion_ids,
+                banned_champions_ids,
+                enemy_champions,
+                champion_ids,
+                None,
+                "RANDOM_MODE",
+            )
+            ownership_excluded = [
+                champ
+                for champ in random_mode_candidates_without_ownership
+                if champ not in random_mode_candidates
+            ]
+            if ownership_excluded:
+                print(
+                    "🚫 Excluded by ownership (not owned on this account): "
+                    f"{ownership_excluded}"
+                )
+
+        print(f"Final ordered pick candidates: {random_mode_candidates}")
+        return random_mode_candidates
+
     ranked_counter_candidates_without_ownership = []
     default_candidates_without_ownership = []
     if owned_champion_ids is not None:
@@ -137,6 +183,7 @@ def build_pick_candidates(
             enemy_champions,
             champion_ids,
             None,
+            "DEFAULT",
         )
 
     ranked_counter_candidates = get_ranked_counter_candidates(
@@ -156,6 +203,7 @@ def build_pick_candidates(
         enemy_champions,
         champion_ids,
         owned_champion_ids,
+        "DEFAULT",
     )
 
     merged_candidates = _merge_candidates(ranked_counter_candidates, default_candidates)
