@@ -2,10 +2,20 @@ import requests
 import urllib3
 import psutil
 import re
+import os
+import pytest
 
 
 # Disable warnings for self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("RUN_LCU_INTEGRATION_TESTS", "").lower() != "true",
+    reason=(
+        "Integration test requires a running local League client. "
+        "Set RUN_LCU_INTEGRATION_TESTS=true to enable."
+    ),
+)
 
 
 def get_lcu_credentials():

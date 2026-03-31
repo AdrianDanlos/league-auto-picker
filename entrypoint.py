@@ -27,7 +27,7 @@ from utils import (
     get_queueType,
     LeagueClientDisconnected,
 )
-from utils.logger import logger
+from utils.logger import logger, set_discord_webhook_url
 from utils import shared_state
 from utils.config_validation import validate_config
 
@@ -56,6 +56,9 @@ if validation_warnings:
     print("⚠️ config.json warnings:")
     for warning in validation_warnings:
         print(f"   - {warning}")
+
+# Configure optional Discord webhook once config is validated.
+set_discord_webhook_url(config.get("discord_webhook_url"))
 
 
 def check_league_client():

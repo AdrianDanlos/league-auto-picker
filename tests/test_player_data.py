@@ -1,11 +1,18 @@
+import os
 import requests
 import urllib3
 import psutil
 import re
+import pytest
 
 
 # Disable warnings for self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("RUN_LCU_INTEGRATION_TESTS", "").lower() != "true",
+    reason="Set RUN_LCU_INTEGRATION_TESTS=true to run LCU integration tests.",
+)
 
 
 def get_lcu_credentials():

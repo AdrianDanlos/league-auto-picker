@@ -242,6 +242,7 @@
   },
   "random_mode_active": true,
   "autoselect_runes": true,
+  "discord_webhook_url": "https://discord.com/api/webhooks/your-webhook-id/your-webhook-token",
   "cycle_counter_hotkey": "f8",
   "preferred_role": "middle",
   "messages": []

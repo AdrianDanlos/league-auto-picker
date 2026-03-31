@@ -1,10 +1,23 @@
-import requests
-import psutil
+import os
 import re
+
+import psutil
+import pytest
+import requests
+import urllib3
+
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+RUN_LCU_INTEGRATION = os.getenv("RUN_LCU_INTEGRATION_TESTS") == "1"
+pytestmark = pytest.mark.skipif(
+    not RUN_LCU_INTEGRATION,
+    reason="Set RUN_LCU_INTEGRATION_TESTS=1 to run live LCU integration tests.",
+)
 
 
 def get_lcu_credentials():
-    """Get League Client credentials from running process"""
+    """Get League Client credentials from running process."""
     for proc in psutil.process_iter(["cmdline"]):
         if proc.info["cmdline"] and "LeagueClientUx.exe" in proc.info["cmdline"][0]:
             cmdline = " ".join(proc.info["cmdline"])
@@ -14,58 +27,58 @@ def get_lcu_credentials():
     raise RuntimeError("League client not found.")
 
 
-webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoymtnU4o9br3grXkV4HJIl2WYtTAY6BQ2__D5MyAbZqpv-FsW3lEKjPcAN2"
+def test_send_discord_pre_game_message_live():
+    """
+    Optional live test that posts a sample pre-game style message to Discord.
 
-# Initialize variables with default values
-tier = "UNRANKED"
-division = ""
-wins = 0
-loses = 0
+    Requires:
+      - RUN_LCU_INTEGRATION_TESTS=1
+      - DISCORD_WEBHOOK_URL set
+      - League client running locally
+    """
+    webhook_url = os.getenv("DISCORD_WEBHOOK_URL", "").strip()
+    if not webhook_url:
+        pytest.skip("DISCORD_WEBHOOK_URL is required for this integration test.")
 
-try:
-    # Get LCU credentials
+    tier = "UNRANKED"
+    division = ""
+    wins = 0
+    losses = 0
+
     port, token = get_lcu_credentials()
     base_url = f"https://127.0.0.1:{port}"
     auth = requests.auth.HTTPBasicAuth("riot", token)
 
-    r = requests.get(
-        f"{base_url}/lol-ranked/v1/current-ranked-stats", auth=auth, verify=False
+    ranked_stats_response = requests.get(
+        f"{base_url}/lol-ranked/v1/current-ranked-stats",
+        auth=auth,
+        verify=False,
+        timeout=10,
+    )
+    ranked_stats = ranked_stats_response.json()
+
+    queue_map = ranked_stats.get("queueMap", {})
+    soloq = queue_map.get("RANKED_SOLO_5x5", {})
+    tier = soloq.get("tier", tier)
+    division = soloq.get("division", division)
+    wins = soloq.get("wins", wins)
+    losses = soloq.get("losses", losses)
+
+    message = (
+        "```ansi\n"
+        "\u001b[1;32m🎮 ═══ GAME STARTED ═══ 🎮\u001b[0m\n"
+        "```\n"
+        "👤 **Player:** `Sample Player`\n"
+        "⚔️ **Champion:** `Kled`\n"
+        "🛡️ **Role:** `Top Lane`\n\n"
+        "🏆 **Good luck and have fun!** 🏆\n"
+        "🌍 **Porofessor:** <https://porofessor.gg/live/euw/sample-0000>\n"
+        f"📊 **Rank:** {tier} {division} | **Wins:** {wins} | **Losses:** {losses}"
     )
 
-    # Parse the JSON response
-    stats_data = r.json()
-    print(f"🔍 stats: {stats_data}")
-
-    # Extract ranked stats
-    if "queueMap" in stats_data and "RANKED_SOLO_5x5" in stats_data["queueMap"]:
-        ranked_data = stats_data["queueMap"]["RANKED_SOLO_5x5"]
-        tier = ranked_data.get("tier", "UNRANKED")
-        division = ranked_data.get("division", "")
-        wins = ranked_data.get("wins", 0)
-        loses = ranked_data.get("losses", 0)
-
-except Exception as e:
-    print(f"❌ Error getting stats: {e}")
-
-# Mensaje que quieres enviar
-mensaje = (
-    "```ansi\n"
-    "\u001b[1;32m🎮 ═══ GAME STARTED ═══ 🎮\u001b[0m\n"
-    "```\n"
-    "👤 **Player:** `N3 Machine`\n"
-    "⚔️ **Champion:** `Kled`\n"
-    "🛡️ **Role:** `Top Lane`\n\n"
-    "🏆 **Good luck and have fun!** 🏆\n"
-    "🌍 **Porofessor:** <https://porofessor.gg/live/euw/n3%20essential-0000>\n"
-    f"📊 **Rank:** {tier} {division} | **Wins:** {wins} | **Losses:** {loses}"
-)
-
-data = {"content": mensaje}
-
-response = requests.post(webhook_url, json=data)
-
-if response.status_code == 204:
-    print("✅ Mensaje enviado con éxito")
-else:
-    print(f"❌ Error al enviar mensaje: {response.status_code}")
-    print(f"❌ Error al enviar mensaje: {response.text}")
+    response = requests.post(
+        webhook_url,
+        json={"content": message},
+        timeout=10,
+    )
+    assert response.status_code == 204
