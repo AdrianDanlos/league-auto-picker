@@ -103,7 +103,7 @@ def consume_session_preferred_role(config_preferred_role, wait_for_selection_sec
 
 
 def _run_prompt_window(default_role):
-    global _root, _is_prompt_active, _selected_role, _dismiss_reason
+    global _root, _is_prompt_active
 
     default_value = _normalize_role(default_role) or "middle"
 
