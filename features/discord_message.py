@@ -123,7 +123,13 @@ def send_discord_champ_select_started_message(session):
     """Send a lightweight Discord message when champion select starts."""
     try:
         player_name = get_summoner_name(session) or "Player"
-        content = f"Hey {player_name}, champion select started!"
+        content = (
+            "```ansi\n"
+            f"\u001b[1;32m🎮 ═══ CHAMP SELECT STARTED ═══ 🎮\u001b[0m\n"
+            "```\n"
+            f"👤 **Player:** `{player_name}`\n"
+            "⚔️ **Status:** Champion select is live!"
+        )
         response = requests.post(webhook_url, json={"content": content})
 
         if response.status_code == 204:
