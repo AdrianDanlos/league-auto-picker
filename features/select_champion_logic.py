@@ -121,7 +121,7 @@ def build_pick_candidates(
     Build ordered pick candidates.
 
     - random_mode_active = True: use RANDOM_MODE pool only (ignore counters/default)
-    - random_mode_active = False: ranked counters first, then DEFAULT picks
+    - random_mode_active = False: use ranked counters when available; otherwise use DEFAULT picks
     """
     random_mode_active = bool(config.get("random_mode_active"))
 
@@ -206,15 +206,21 @@ def build_pick_candidates(
         "DEFAULT",
     )
 
-    merged_candidates = _merge_candidates(ranked_counter_candidates, default_candidates)
+    # Use a single source for final candidates: counters when present, otherwise defaults.
+    selected_candidates = (
+        ranked_counter_candidates if ranked_counter_candidates else default_candidates
+    )
 
     if owned_champion_ids is not None:
-        merged_without_ownership = _merge_candidates(
-            ranked_counter_candidates_without_ownership,
-            default_candidates_without_ownership,
+        selected_without_ownership = (
+            ranked_counter_candidates_without_ownership
+            if ranked_counter_candidates_without_ownership
+            else default_candidates_without_ownership
         )
         ownership_excluded = [
-            champ for champ in merged_without_ownership if champ not in merged_candidates
+            champ
+            for champ in selected_without_ownership
+            if champ not in selected_candidates
         ]
         if ownership_excluded:
             print(
@@ -222,8 +228,8 @@ def build_pick_candidates(
                 f"{ownership_excluded}"
             )
 
-    print(f"Final ordered pick candidates: {merged_candidates}")
-    return merged_candidates
+    print(f"Final ordered pick candidates: {selected_candidates}")
+    return selected_candidates
 
 
 def find_best_counter_pick(
