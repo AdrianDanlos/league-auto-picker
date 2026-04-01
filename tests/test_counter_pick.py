@@ -1,4 +1,5 @@
 from features import select_champion_logic
+from features.pick_and_ban import _get_active_pick, _next_cycle_position
 
 
 def _always_available(*_args, **_kwargs):
@@ -116,3 +117,107 @@ def test_build_pick_candidates_falls_back_to_defaults_when_no_counters(monkeypat
     )
 
     assert candidates == ["Ahri", "Viktor", "Swain"]
+
+
+def test_build_pick_candidate_sources_creates_one_list_per_enemy(monkeypatch):
+    monkeypatch.setattr(
+        select_champion_logic,
+        "is_champion_available",
+        _always_available,
+    )
+
+    config = {
+        "picks": {
+            "MIDDLE": {
+                "Diana": ["Yone", "Annie"],
+                "Ahri": ["Annie"],
+                "Fizz": ["Yone"],
+            },
+            "DEFAULT": {
+                "MIDDLE": ["Ahri", "Viktor", "Swain"],
+            },
+        }
+    }
+
+    candidate_sources = select_champion_logic.build_pick_candidate_sources(
+        config=config,
+        lane_key="MIDDLE",
+        enemy_champions=["Yone", "Annie"],
+        lane_picks_config=config["picks"]["MIDDLE"],
+        ally_champion_ids=set(),
+        banned_champions_ids=[],
+        champion_ids={},
+    )
+
+    assert candidate_sources == [
+        {"source_enemy": "Yone", "candidates": ["Diana", "Fizz"]},
+        {"source_enemy": "Annie", "candidates": ["Ahri", "Diana"]},
+    ]
+
+
+def test_build_pick_candidate_sources_falls_back_to_default_source(monkeypatch):
+    monkeypatch.setattr(
+        select_champion_logic,
+        "is_champion_available",
+        _always_available,
+    )
+
+    config = {
+        "picks": {
+            "MIDDLE": {
+                "Diana": ["Yone"],
+                "Ahri": ["Yone"],
+            },
+            "DEFAULT": {
+                "MIDDLE": ["Ahri", "Viktor", "Swain"],
+            },
+        }
+    }
+
+    candidate_sources = select_champion_logic.build_pick_candidate_sources(
+        config=config,
+        lane_key="MIDDLE",
+        enemy_champions=["Zed"],
+        lane_picks_config=config["picks"]["MIDDLE"],
+        ally_champion_ids=set(),
+        banned_champions_ids=[],
+        champion_ids={},
+    )
+
+    assert candidate_sources == [
+        {"source_enemy": "DEFAULT", "candidates": ["Ahri", "Viktor", "Swain"]}
+    ]
+
+
+def test_cycle_position_moves_within_list_then_to_next_list():
+    candidate_sources = [
+        {"source_enemy": "Yone", "candidates": ["Diana", "Fizz"]},
+        {"source_enemy": "Annie", "candidates": ["Ahri", "Diana"]},
+    ]
+
+    source_idx, candidate_idx = _next_cycle_position(candidate_sources, 0, 0)
+    assert (source_idx, candidate_idx) == (0, 1)
+
+    source_idx, candidate_idx = _next_cycle_position(candidate_sources, source_idx, candidate_idx)
+    assert (source_idx, candidate_idx) == (1, 0)
+
+    source_idx, candidate_idx = _next_cycle_position(candidate_sources, source_idx, candidate_idx)
+    assert (source_idx, candidate_idx) == (1, 1)
+
+    source_idx, candidate_idx = _next_cycle_position(candidate_sources, source_idx, candidate_idx)
+    assert (source_idx, candidate_idx) == (0, 0)
+
+
+def test_get_active_pick_returns_source_and_position():
+    candidate_sources = [
+        {"source_enemy": "Yone", "candidates": ["Diana", "Fizz"]},
+        {"source_enemy": "Annie", "candidates": ["Ahri"]},
+    ]
+
+    pick, source_enemy, source_idx, candidate_idx = _get_active_pick(
+        candidate_sources, 1, 0
+    )
+    assert pick == "Ahri"
+    assert source_enemy == "Annie"
+    assert source_idx == 1
+    assert candidate_idx == 0

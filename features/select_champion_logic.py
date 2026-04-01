@@ -15,7 +15,7 @@ def _merge_candidates(ranked_counter_candidates, default_candidates):
     return merged_candidates
 
 
-def get_ranked_counter_candidates(
+def get_counter_candidate_lists(
     enemy_champions,
     lane_picks_config,
     ally_champion_ids,
@@ -23,21 +23,20 @@ def get_ranked_counter_candidates(
     champion_ids,
     owned_champion_ids=None,
 ):
-    """Return available counter candidates globally ranked from best to worst."""
+    """Return ordered counter candidate lists keyed by source enemy champion."""
     if not enemy_champions:
         return []
 
-    ranked_hits = []
+    counter_candidate_lists = []
     for enemy_order, enemy_champ in enumerate(enemy_champions):
         print(f"Checking enemy champion: {enemy_champ}")
-        found_counter = False
+        ranked_hits = []
         for counter_order, (counter_champ, counter_list) in enumerate(
             lane_picks_config.items()
         ):
             if enemy_champ not in counter_list:
                 continue
 
-            found_counter = True
             try:
                 if not is_champion_available(
                     counter_champ,
@@ -53,27 +52,54 @@ def get_ranked_counter_candidates(
                     continue
 
                 enemy_index = counter_list.index(enemy_champ)
-                ranked_hits.append(
-                    (enemy_index, enemy_order, counter_order, counter_champ)
-                )
+                ranked_hits.append((enemy_index, enemy_order, counter_order, counter_champ))
             except Exception as e:
                 log_and_discord(
                     f"⚠️ Error in is_champion_available for {counter_champ}: {e}"
                 )
                 continue
 
-        if not found_counter:
+        ranked_hits.sort(key=lambda item: (item[0], item[1], item[2]))
+        ranked_candidates = []
+        seen = set()
+        for _, _, _, counter_champ in ranked_hits:
+            if counter_champ in seen:
+                continue
+            seen.add(counter_champ)
+            ranked_candidates.append(counter_champ)
+
+        if ranked_candidates:
+            counter_candidate_lists.append(
+                {"source_enemy": enemy_champ, "candidates": ranked_candidates}
+            )
+            print(f"Counter candidate list for {enemy_champ}: {ranked_candidates}")
+        else:
             print(f"No counter found for enemy champion: {enemy_champ}")
 
-    ranked_hits.sort(key=lambda item: (item[0], item[1], item[2]))
+    return counter_candidate_lists
 
-    ranked_candidates = []
-    seen = set()
-    for _, _, _, counter_champ in ranked_hits:
-        if counter_champ in seen:
-            continue
-        seen.add(counter_champ)
-        ranked_candidates.append(counter_champ)
+
+def get_ranked_counter_candidates(
+    enemy_champions,
+    lane_picks_config,
+    ally_champion_ids,
+    banned_champions_ids,
+    champion_ids,
+    owned_champion_ids=None,
+):
+    """Return available counter candidates globally ranked from best to worst."""
+    counter_candidate_lists = get_counter_candidate_lists(
+        enemy_champions,
+        lane_picks_config,
+        ally_champion_ids,
+        banned_champions_ids,
+        champion_ids,
+        owned_champion_ids,
+    )
+    ranked_candidates = _merge_candidates(
+        [champ for source in counter_candidate_lists for champ in source["candidates"]],
+        [],
+    )
 
     print(f"Ranked counter candidates: {ranked_candidates}")
     return ranked_candidates
@@ -123,6 +149,40 @@ def build_pick_candidates(
     - random_mode_active = True: use RANDOM_MODE pool only (ignore counters/default)
     - random_mode_active = False: use ranked counters when available; otherwise use DEFAULT picks
     """
+    candidate_sources = build_pick_candidate_sources(
+        config,
+        lane_key,
+        enemy_champions,
+        lane_picks_config,
+        ally_champion_ids,
+        banned_champions_ids,
+        champion_ids,
+        owned_champion_ids,
+    )
+    selected_candidates = _merge_candidates(
+        [champ for source in candidate_sources for champ in source["candidates"]],
+        [],
+    )
+    print(f"Final ordered pick candidates: {selected_candidates}")
+    return selected_candidates
+
+
+def build_pick_candidate_sources(
+    config,
+    lane_key,
+    enemy_champions,
+    lane_picks_config,
+    ally_champion_ids,
+    banned_champions_ids,
+    champion_ids,
+    owned_champion_ids=None,
+):
+    """
+    Build ordered candidate sources.
+
+    - random_mode_active = True: use RANDOM_MODE pool only (ignore counters/default)
+    - random_mode_active = False: use one counter list per enemy when available; otherwise use DEFAULT picks
+    """
     random_mode_active = bool(config.get("random_mode_active"))
 
     if random_mode_active:
@@ -161,13 +221,12 @@ def build_pick_candidates(
                     f"{ownership_excluded}"
                 )
 
-        print(f"Final ordered pick candidates: {random_mode_candidates}")
-        return random_mode_candidates
+        return [{"source_enemy": "RANDOM_MODE", "candidates": random_mode_candidates}]
 
-    ranked_counter_candidates_without_ownership = []
+    counter_candidate_lists_without_ownership = []
     default_candidates_without_ownership = []
     if owned_champion_ids is not None:
-        ranked_counter_candidates_without_ownership = get_ranked_counter_candidates(
+        counter_candidate_lists_without_ownership = get_counter_candidate_lists(
             enemy_champions,
             lane_picks_config,
             ally_champion_ids,
@@ -186,7 +245,7 @@ def build_pick_candidates(
             "DEFAULT",
         )
 
-    ranked_counter_candidates = get_ranked_counter_candidates(
+    counter_candidate_lists = get_counter_candidate_lists(
         enemy_champions,
         lane_picks_config,
         ally_champion_ids,
@@ -206,21 +265,39 @@ def build_pick_candidates(
         "DEFAULT",
     )
 
-    # Use a single source for final candidates: counters when present, otherwise defaults.
-    selected_candidates = (
-        ranked_counter_candidates if ranked_counter_candidates else default_candidates
+    selected_sources = (
+        counter_candidate_lists
+        if counter_candidate_lists
+        else [{"source_enemy": "DEFAULT", "candidates": default_candidates}]
     )
+    if counter_candidate_lists:
+        print(f"Using counter candidate lists: {counter_candidate_lists}")
+    else:
+        print("No counter candidate lists available. Falling back to DEFAULT picks.")
 
     if owned_champion_ids is not None:
         selected_without_ownership = (
-            ranked_counter_candidates_without_ownership
-            if ranked_counter_candidates_without_ownership
-            else default_candidates_without_ownership
+            counter_candidate_lists_without_ownership
+            if counter_candidate_lists_without_ownership
+            else [
+                {
+                    "source_enemy": "DEFAULT",
+                    "candidates": default_candidates_without_ownership,
+                }
+            ]
+        )
+        selected_without_ownership_flat = _merge_candidates(
+            [champ for source in selected_without_ownership for champ in source["candidates"]],
+            [],
+        )
+        selected_with_ownership_flat = _merge_candidates(
+            [champ for source in selected_sources for champ in source["candidates"]],
+            [],
         )
         ownership_excluded = [
             champ
-            for champ in selected_without_ownership
-            if champ not in selected_candidates
+            for champ in selected_without_ownership_flat
+            if champ not in selected_with_ownership_flat
         ]
         if ownership_excluded:
             print(
@@ -228,8 +305,7 @@ def build_pick_candidates(
                 f"{ownership_excluded}"
             )
 
-    print(f"Final ordered pick candidates: {selected_candidates}")
-    return selected_candidates
+    return selected_sources
 
 
 def find_best_counter_pick(

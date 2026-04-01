@@ -21,7 +21,7 @@ from utils import (
     get_banned_champion_ids,
     is_still_our_turn_to_pick,
 )
-from features.select_champion_logic import build_pick_candidates
+from features.select_champion_logic import build_pick_candidate_sources
 from features.execute_pick_ban import (
     execute_ban,
     execute_pick,
@@ -52,11 +52,46 @@ def _consume_cycle_request(cycle_state):
     return True
 
 
-def _next_candidate_index(current_index, total_candidates):
-    """Return the next candidate index, wrapping back to start."""
-    if total_candidates <= 0:
-        return 0
-    return (current_index + 1) % total_candidates
+def _next_cycle_position(candidate_sources, current_source_index, current_candidate_index):
+    """Advance candidate position across source lists and wrap around."""
+    if not candidate_sources:
+        return 0, 0
+
+    total_sources = len(candidate_sources)
+    current_source_index = min(max(current_source_index, 0), total_sources - 1)
+    current_candidates = candidate_sources[current_source_index].get("candidates", [])
+
+    if current_candidates and current_candidate_index + 1 < len(current_candidates):
+        return current_source_index, current_candidate_index + 1
+
+    for offset in range(1, total_sources + 1):
+        next_source_index = (current_source_index + offset) % total_sources
+        next_candidates = candidate_sources[next_source_index].get("candidates", [])
+        if next_candidates:
+            return next_source_index, 0
+
+    return 0, 0
+
+
+def _get_active_pick(candidate_sources, current_source_index, current_candidate_index):
+    """Resolve the active pick and position metadata from candidate sources."""
+    if not candidate_sources:
+        return None, None, 0, 0
+
+    total_sources = len(candidate_sources)
+    current_source_index = min(max(current_source_index, 0), total_sources - 1)
+    source = candidate_sources[current_source_index]
+    candidates = source.get("candidates", [])
+    if not candidates:
+        return None, source.get("source_enemy", "UNKNOWN"), current_source_index, 0
+
+    current_candidate_index = min(max(current_candidate_index, 0), len(candidates) - 1)
+    return (
+        candidates[current_candidate_index],
+        source.get("source_enemy", "UNKNOWN"),
+        current_source_index,
+        current_candidate_index,
+    )
 
 
 def _setup_cycle_hotkey(config):
@@ -141,7 +176,8 @@ def pick_and_ban(config, preferred_role_override=None):
     skip_reason_logged = False
     ownership_warning_logged = False
     active_pick_action_id = None
-    pick_candidates = []
+    pick_candidate_sources = []
+    current_source_index = 0
     current_candidate_index = 0
     preselected_pick_name = None
     _, cycle_state, hotkey_handler = _setup_cycle_hotkey(config)
@@ -301,7 +337,7 @@ def pick_and_ban(config, preferred_role_override=None):
 
                                 banned_champions_ids = get_banned_champion_ids(session)
 
-                                pick_candidates = build_pick_candidates(
+                                pick_candidate_sources = build_pick_candidate_sources(
                                     config,
                                     lane_key,
                                     enemy_champions,
@@ -313,53 +349,106 @@ def pick_and_ban(config, preferred_role_override=None):
                                 )
                             except Exception as e:
                                 log_and_discord(f"⚠️ Error in pick logic: {e}")
-                                pick_candidates = []
+                                pick_candidate_sources = []
                                 banned_champions_ids = []  # Fallback to empty list
 
                             action_id = action.get("id")
                             if action_id != active_pick_action_id:
                                 active_pick_action_id = action_id
+                                current_source_index = 0
                                 current_candidate_index = 0
                                 is_champion_preselected = False
                                 preselected_pick_name = None
 
-                            if (
-                                preselected_pick_name
-                                and preselected_pick_name in pick_candidates
-                            ):
-                                current_candidate_index = pick_candidates.index(
-                                    preselected_pick_name
+                            if preselected_pick_name and pick_candidate_sources:
+                                found_preselected = False
+                                for source_index, source in enumerate(
+                                    pick_candidate_sources
+                                ):
+                                    source_candidates = source.get("candidates", [])
+                                    if preselected_pick_name in source_candidates:
+                                        current_source_index = source_index
+                                        current_candidate_index = source_candidates.index(
+                                            preselected_pick_name
+                                        )
+                                        found_preselected = True
+                                        break
+                                if not found_preselected:
+                                    current_source_index = min(
+                                        current_source_index,
+                                        len(pick_candidate_sources) - 1,
+                                    )
+                                    source_candidates = pick_candidate_sources[
+                                        current_source_index
+                                    ].get("candidates", [])
+                                    current_candidate_index = min(
+                                        current_candidate_index,
+                                        max(len(source_candidates) - 1, 0),
+                                    )
+                            elif pick_candidate_sources:
+                                current_source_index = min(
+                                    current_source_index,
+                                    len(pick_candidate_sources) - 1,
                                 )
-                            elif pick_candidates:
+                                source_candidates = pick_candidate_sources[
+                                    current_source_index
+                                ].get("candidates", [])
                                 current_candidate_index = min(
                                     current_candidate_index,
-                                    len(pick_candidates) - 1,
+                                    max(len(source_candidates) - 1, 0),
                                 )
                             else:
+                                current_source_index = 0
                                 current_candidate_index = 0
 
                             if _consume_cycle_request(cycle_state):
-                                if pick_candidates:
-                                    previous_index = current_candidate_index
-                                    current_candidate_index = _next_candidate_index(
-                                        current_candidate_index, len(pick_candidates)
+                                if pick_candidate_sources:
+                                    previous_source_index = current_source_index
+                                    previous_candidate_index = current_candidate_index
+                                    current_source_index, current_candidate_index = (
+                                        _next_cycle_position(
+                                            pick_candidate_sources,
+                                            current_source_index,
+                                            current_candidate_index,
+                                        )
                                     )
-                                    cycled_pick = pick_candidates[current_candidate_index]
-                                    if current_candidate_index != previous_index:
+                                    (
+                                        cycled_pick,
+                                        source_enemy,
+                                        source_index,
+                                        candidate_index,
+                                    ) = _get_active_pick(
+                                        pick_candidate_sources,
+                                        current_source_index,
+                                        current_candidate_index,
+                                    )
+                                    if (
+                                        current_source_index != previous_source_index
+                                        or current_candidate_index
+                                        != previous_candidate_index
+                                    ):
                                         is_champion_preselected = False
                                         preselected_pick_name = None
                                     print(
-                                        f"🔁 Cycle requested. Candidate {current_candidate_index + 1}/{len(pick_candidates)}: {cycled_pick}"
+                                        "🔁 Cycle requested. "
+                                        f"List {source_index + 1}/{len(pick_candidate_sources)} ({source_enemy}), "
+                                        f"candidate {candidate_index + 1}/{len(pick_candidate_sources[source_index].get('candidates', []))}: "
+                                        f"{cycled_pick}"
                                     )
                                 else:
                                     print(
                                         "⚠️ Cycle requested but no counter/default candidates are available."
                                     )
 
-                            best_pick = (
-                                pick_candidates[current_candidate_index]
-                                if pick_candidates
-                                else None
+                            (
+                                best_pick,
+                                source_enemy,
+                                source_index,
+                                candidate_index,
+                            ) = _get_active_pick(
+                                pick_candidate_sources,
+                                current_source_index,
+                                current_candidate_index,
                             )
 
                             if not best_pick:
@@ -377,7 +466,10 @@ def pick_and_ban(config, preferred_role_override=None):
                                     is_champion_preselected = True
                                     preselected_pick_name = best_pick
                                     print(
-                                        f"🎯 Preselected {best_pick}, will lock in when timer is low... "
+                                        f"🎯 Preselected {best_pick} from list {source_index + 1}/{len(pick_candidate_sources)} "
+                                        f"({source_enemy}), candidate {candidate_index + 1}/"
+                                        f"{len(pick_candidate_sources[source_index].get('candidates', []))}. "
+                                        "Will lock in when timer is low... "
                                         f"(press {str(config.get('cycle_counter_hotkey', 'f8')).upper()} to cycle counters)"
                                     )
                                 else:
@@ -404,16 +496,34 @@ def pick_and_ban(config, preferred_role_override=None):
 
                                     if not _consume_cycle_request(cycle_state):
                                         continue
-                                    if not pick_candidates:
+                                    if not pick_candidate_sources:
                                         continue
 
-                                    previous_index = current_candidate_index
-                                    current_candidate_index = _next_candidate_index(
-                                        current_candidate_index, len(pick_candidates)
+                                    previous_source_index = current_source_index
+                                    previous_candidate_index = current_candidate_index
+                                    current_source_index, current_candidate_index = (
+                                        _next_cycle_position(
+                                            pick_candidate_sources,
+                                            current_source_index,
+                                            current_candidate_index,
+                                        )
                                     )
-                                    best_pick = pick_candidates[current_candidate_index]
+                                    (
+                                        best_pick,
+                                        source_enemy,
+                                        source_index,
+                                        candidate_index,
+                                    ) = _get_active_pick(
+                                        pick_candidate_sources,
+                                        current_source_index,
+                                        current_candidate_index,
+                                    )
 
-                                    if current_candidate_index != previous_index:
+                                    if (
+                                        current_source_index != previous_source_index
+                                        or current_candidate_index
+                                        != previous_candidate_index
+                                    ):
                                         is_champion_preselected = False
                                         preselected_pick_name = None
                                         champ_id_to_preselect = CHAMPION_IDS.get(best_pick)
@@ -424,7 +534,10 @@ def pick_and_ban(config, preferred_role_override=None):
                                             is_champion_preselected = True
                                             preselected_pick_name = best_pick
                                         print(
-                                            f"🔁 Cycle requested during wait. Candidate {current_candidate_index + 1}/{len(pick_candidates)}: {best_pick}"
+                                            "🔁 Cycle requested during wait. "
+                                            f"List {source_index + 1}/{len(pick_candidate_sources)} ({source_enemy}), "
+                                            f"candidate {candidate_index + 1}/{len(pick_candidate_sources[source_index].get('candidates', []))}: "
+                                            f"{best_pick}"
                                         )
 
                             # Check if already locked in before waiting
