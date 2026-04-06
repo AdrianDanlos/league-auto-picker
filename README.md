@@ -57,6 +57,12 @@ More information about the `config.json` file:
 - Add `autoselect_runes` to `config.json` (example: `"autoselect_runes": true`).
 - Set it to `false` if you do not want the bot to auto-set runes after locking a champion.
 
+**Discord webhook configuration (optional)**:
+
+- Add `discord_webhook_url` to `config.json` to enable Discord notifications.
+- If omitted, Discord notifications are skipped.
+- You can also provide `DISCORD_WEBHOOK_URL` as an environment variable (used only when the config key is missing).
+
 **Messages**: You can define multiple messages and the bot will randomly select one to send during champ select. If the messages list is empty, the bot skips sending a chat message.
 
 ## Summoner Spell IDs

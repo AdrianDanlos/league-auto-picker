@@ -64,13 +64,37 @@ def log_print(*args, **kwargs):
     print(*args, **kwargs)
 
 
-webhook_url = "https://discord.com/api/webhooks/1401132002693873674/2QGQjoLaeESr4QhK6qMt3ortI5ChkZIIfp3L3uznlgBDI96C1IBAmVWkklVc8LeyoJ-v"
+_configured_discord_webhook_url = None
+_discord_webhook_env_var = "DISCORD_WEBHOOK_URL"
+
+
+def set_discord_webhook_url(webhook_url):
+    """Set Discord webhook URL from validated config."""
+    global _configured_discord_webhook_url
+    if isinstance(webhook_url, str):
+        webhook_url = webhook_url.strip()
+    _configured_discord_webhook_url = webhook_url or None
+
+
+def get_discord_webhook_url():
+    """
+    Resolve Discord webhook URL from config first, env second.
+    Returns None when Discord notifications are intentionally disabled.
+    """
+    if _configured_discord_webhook_url:
+        return _configured_discord_webhook_url
+    env_webhook = os.getenv(_discord_webhook_env_var, "").strip()
+    return env_webhook or None
 
 
 def send_discord_error_message(error, summoner_name=None):
     try:
+        webhook_url = get_discord_webhook_url()
+        if not webhook_url:
+            return
+
         data = {"content": f"{summoner_name or 'Unknown'}: {error}"}
-        response = requests.post(webhook_url, json=data)
+        response = requests.post(webhook_url, json=data, timeout=10)
 
         if response.status_code == 204:
             print("✅ Discord error message sent")

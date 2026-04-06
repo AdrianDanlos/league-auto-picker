@@ -1,11 +1,9 @@
 import requests
 from urllib.parse import quote
-from utils.logger import log_and_discord
+from utils.logger import log_and_discord, get_discord_webhook_url
 from utils import get_gameflow_phase, get_rank_data, LeagueClientDisconnected
 from utils import get_assigned_lane, get_region, get_queueType, get_summoner_name
 from utils import shared_state
-
-webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoymtnU4o9br3grXkV4HJIl2WYtTAY6BQ2__D5MyAbZqpv-FsW3lEKjPcAN2"
 
 
 def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
@@ -31,6 +29,7 @@ def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
         # Format the content string
         result_emoji = "✅" if win_loss.get("won", False) else "❌"
         result_text = "Victory" if win_loss.get("won", False) else "Defeat"
+        champion_name = champion.get("name", "Unknown")
 
         # KDA calculation
         kills = kda.get("kills", 0)
@@ -50,15 +49,18 @@ def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
         content = (
             "```diff\n"
             f"🎮 {summoner_name}\n\n"
-            f"{result_emoji} {result_text} – {champion} | {lp_change_text} LP\n\n"
+            f"{result_emoji} {result_text} – {champion_name} | {lp_change_text} LP\n\n"
             f"⚔️ KDA: {kills}/{deaths}/{assists} ({kda_ratio})\n\n"
             f"🏆 {tier} {division} / {current_lp} LP"
             "```"
         )
 
         data = {"content": content}
+        webhook_url = get_discord_webhook_url()
+        if not webhook_url:
+            return
 
-        response = requests.post(webhook_url, json=data)
+        response = requests.post(webhook_url, json=data, timeout=10)
 
         if response.status_code == 204:
             print("✅ Discord message sent with post game stats")
@@ -103,8 +105,11 @@ def send_discord_pre_game_message(game_data):
             )
 
             data = {"content": styled_content}
+            webhook_url = get_discord_webhook_url()
+            if not webhook_url:
+                return
 
-            response = requests.post(webhook_url, json=data)
+            response = requests.post(webhook_url, json=data, timeout=10)
 
             if response.status_code == 204:
                 print("✅ Discord message sent")
@@ -130,7 +135,10 @@ def send_discord_champ_select_started_message(session):
             f"👤 **Player:** `{player_name}`\n"
             "⚔️ **Status:** Champion select is live!"
         )
-        response = requests.post(webhook_url, json={"content": content})
+        webhook_url = get_discord_webhook_url()
+        if not webhook_url:
+            return
+        response = requests.post(webhook_url, json={"content": content}, timeout=10)
 
         if response.status_code == 204:
             print("✅ Discord champ select start message sent")

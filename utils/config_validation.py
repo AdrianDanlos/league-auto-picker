@@ -186,4 +186,17 @@ def validate_config(config):
                 "'cycle_counter_hotkey' must be a non-empty string (example: 'f8')."
             )
 
+    if "discord_webhook_url" in config:
+        discord_webhook_url = config.get("discord_webhook_url")
+        if discord_webhook_url is None:
+            pass
+        elif not isinstance(discord_webhook_url, str) or not discord_webhook_url.strip():
+            errors.append(
+                "'discord_webhook_url' must be a non-empty string when provided."
+            )
+        elif not discord_webhook_url.startswith("https://discord.com/api/webhooks/"):
+            errors.append(
+                "'discord_webhook_url' must be a valid Discord webhook URL."
+            )
+
     return errors, warnings
