@@ -105,7 +105,8 @@ def swap_role(session, config, preferred_role_override=None):
             swap_id = swap.get("id")
             break
 
-    if not swap_id:
+    # Use `is None` — swap IDs can be 0, which is falsy in Python
+    if swap_id is None:
         print(f"[Role Swap] No position swap found for cellId {target_cell_id}.")
         print(f"[Role Swap] Available swaps: {position_swaps}")
         log_and_discord(

@@ -44,6 +44,20 @@ def normalize_lane_key(role):
     return aliases.get(role_key, role_key)
 
 
+def _first_owned_default_pick(default_names, champion_ids, owned_champion_ids):
+    """
+    First DEFAULT-list champion with a known ID that the account owns.
+    Order matches config; skips entries with missing IDs or not owned.
+    """
+    if not default_names or not owned_champion_ids:
+        return None, None
+    for name in default_names:
+        cid = champion_ids.get(name)
+        if cid and cid in owned_champion_ids:
+            return name, cid
+    return None, None
+
+
 def _consume_cycle_request(cycle_state):
     """Consume one queued cycle request from the hotkey callback."""
     if not cycle_state["requested"]:
@@ -210,15 +224,12 @@ def pick_and_ban(config, preferred_role_override=None):
             default_picks_for_preferred_role = (
                 config.get("picks", {}).get("DEFAULT", {}).get(preferred_lane_key, [])
             )
-            early_default_pick = (
-                default_picks_for_preferred_role[0]
-                if default_picks_for_preferred_role
-                else None
+            early_default_pick, early_default_pick_id = _first_owned_default_pick(
+                default_picks_for_preferred_role,
+                CHAMPION_IDS,
+                owned_champion_ids,
             )
-            early_default_pick_id = CHAMPION_IDS.get(early_default_pick)
-            has_owned_default_preselect = bool(
-                early_default_pick_id and early_default_pick_id in owned_champion_ids
-            )
+            has_owned_default_preselect = bool(early_default_pick_id)
 
             # Try to preselect as soon as champ-select session is available.
             if (
@@ -242,17 +253,18 @@ def pick_and_ban(config, preferred_role_override=None):
                         "Will retry and fallback after ban if needed."
                     )
             elif not skip_reason_logged and not is_early_default_intent_sent:
-                if not early_default_pick:
+                if not default_picks_for_preferred_role:
                     print(
                         f"⚠️ Skipping early preselect: no DEFAULT pick for role {preferred_lane_key}."
                     )
-                elif not early_default_pick_id:
+                elif not owned_champion_ids:
                     print(
-                        f"⚠️ Skipping early preselect: champion ID not found for {early_default_pick}."
+                        "⚠️ Skipping early preselect: owned champions could not be loaded."
                     )
-                elif not has_owned_default_preselect:
+                elif not early_default_pick:
                     print(
-                        f"⚠️ Skipping early preselect: {early_default_pick} is not owned on this account."
+                        f"⚠️ Skipping early preselect: no owned DEFAULT pick for role "
+                        f"{preferred_lane_key} (check IDs and ownership)."
                     )
                 skip_reason_logged = True
 

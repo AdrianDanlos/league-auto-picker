@@ -196,7 +196,7 @@ def swap_pick_position():
                     swap_id = swap.get("id")
                     break
 
-            if not swap_id:
+            if swap_id is None:
                 attempted_cell_ids.add(cell_id)
                 continue
 
