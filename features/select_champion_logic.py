@@ -3,6 +3,17 @@ from utils.logger import log_and_discord
 from utils import is_champion_available
 
 
+def _counter_list_index_for_enemy(counter_list, enemy_champ):
+    """Return list index where an entry matches enemy_champ case-insensitively, or None."""
+    if not counter_list or enemy_champ is None:
+        return None
+    target = str(enemy_champ).casefold()
+    for i, name in enumerate(counter_list):
+        if str(name).casefold() == target:
+            return i
+    return None
+
+
 def _merge_candidates(ranked_counter_candidates, default_candidates):
     """Merge candidates preserving order and removing duplicates."""
     merged_candidates = []
@@ -34,7 +45,8 @@ def get_counter_candidate_lists(
         for counter_order, (counter_champ, counter_list) in enumerate(
             lane_picks_config.items()
         ):
-            if enemy_champ not in counter_list:
+            enemy_index = _counter_list_index_for_enemy(counter_list, enemy_champ)
+            if enemy_index is None:
                 continue
 
             try:
@@ -50,8 +62,6 @@ def get_counter_candidate_lists(
                         f"Skipping {counter_champ} - not available (ownership, prepicked, banned, or picked by enemies)"
                     )
                     continue
-
-                enemy_index = counter_list.index(enemy_champ)
                 ranked_hits.append((enemy_index, enemy_order, counter_order, counter_champ))
             except Exception as e:
                 log_and_discord(

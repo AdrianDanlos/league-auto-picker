@@ -113,6 +113,13 @@ def get_owned_champion_ids(force_refresh=False):
         return set()
 
 
+def _name_in_list_case_insensitive(name, names):
+    if not name or not names:
+        return False
+    target = str(name).casefold()
+    return any(str(n).casefold() == target for n in names)
+
+
 def is_champion_available(
     champion_name,
     ally_champion_ids,
@@ -142,7 +149,7 @@ def is_champion_available(
             return False
 
         # Check if champion is picked by enemies
-        if champion_name in enemy_champions:
+        if _name_in_list_case_insensitive(champion_name, enemy_champions):
             return False
 
         return True

@@ -31,6 +31,29 @@ def test_get_ranked_counter_candidates_orders_globally(monkeypatch):
     assert ranked == ["Diana", "Fizz", "Ahri"]
 
 
+def test_get_ranked_counter_candidates_matches_enemy_case_insensitively(monkeypatch):
+    monkeypatch.setattr(
+        select_champion_logic,
+        "is_champion_available",
+        _always_available,
+    )
+
+    lane_picks_config = {
+        "Kassadin": ["leblanc", "Azir"],
+    }
+    enemy_champions = ["LeBlanc"]
+
+    ranked = select_champion_logic.get_ranked_counter_candidates(
+        enemy_champions,
+        lane_picks_config,
+        ally_champion_ids=set(),
+        banned_champions_ids=[],
+        champion_ids={},
+    )
+
+    assert ranked == ["Kassadin"]
+
+
 def test_get_ranked_counter_candidates_dedupes_candidates(monkeypatch):
     monkeypatch.setattr(
         select_champion_logic,
