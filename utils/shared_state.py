@@ -24,3 +24,7 @@ client_disconnected = False
 
 # Preferred role loaded from config.json for prompt defaults/fallback.
 config_preferred_role = None
+
+# When False, pick_and_ban skips automated pick actions (hover, lock-in, post-lock runes/summs).
+# Toggled at runtime via optional config hotkey; reset to True at each champ select.
+auto_pick_enabled = True

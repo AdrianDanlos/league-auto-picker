@@ -7,27 +7,22 @@ from features.select_default_runes_and_summs import (
     select_summoner_spells,
 )
 from utils.logger import log_and_discord
-from utils import get_session, LeagueClientDisconnected
 from utils import (
+    LeagueClientDisconnected,
     fetch_champion_ids,
     fetch_champion_names,
-    get_owned_champion_ids,
-    is_champion_locked_in,
-    get_locked_in_champion,
-)
-from utils import (
     get_assigned_lane,
-    get_enemy_champions,
     get_banned_champion_ids,
+    get_enemy_champions,
+    get_locked_in_champion,
+    get_owned_champion_ids,
+    get_session,
+    is_champion_locked_in,
     is_still_our_turn_to_pick,
+    shared_state,
 )
 from features.select_champion_logic import build_pick_candidate_sources
-from features.execute_pick_ban import (
-    execute_ban,
-    execute_pick,
-    execute_preselect,
-    execute_preselect_intent,
-)
+import features.execute_pick_ban as execute_pick_ban
 from features.discord_message import create_discord_message
 
 
@@ -66,7 +61,9 @@ def _consume_cycle_request(cycle_state):
     return True
 
 
-def _next_cycle_position(candidate_sources, current_source_index, current_candidate_index):
+def _next_cycle_position(
+    candidate_sources, current_source_index, current_candidate_index
+):
     """Advance candidate position across source lists and wrap around."""
     if not candidate_sources:
         return 0, 0
@@ -129,6 +126,35 @@ def _setup_cycle_hotkey(config):
     return hotkey, cycle_state, hotkey_handler
 
 
+def _setup_auto_pick_toggle_hotkey(config):
+    """
+    Register optional global hotkey to toggle automated picking.
+    If config omits toggle_auto_pick_hotkey or it is empty after strip, returns None.
+    """
+    raw = config.get("toggle_auto_pick_hotkey")
+    if raw is None:
+        return None
+    hotkey = str(raw).strip()
+    if not hotkey:
+        return None
+
+    def _toggle_auto_pick():
+        shared_state.auto_pick_enabled = not shared_state.auto_pick_enabled
+        state = "ON" if shared_state.auto_pick_enabled else "OFF"
+        print(f"⌨️ Auto-pick {state} ({hotkey.upper()})")
+
+    hotkey_handler = None
+    try:
+        hotkey_handler = keyboard.add_hotkey(hotkey, _toggle_auto_pick)
+        print(f"⌨️ Auto-pick toggle hotkey active: {hotkey.upper()}")
+    except Exception as e:
+        log_and_discord(
+            f"⚠️ Could not register auto-pick toggle hotkey '{hotkey}': {e}. "
+            "Auto-pick toggle will be disabled."
+        )
+    return hotkey_handler
+
+
 def pick_and_ban(config, preferred_role_override=None):
     """
     Continuously monitors the League of Legends champion select session and automates the pick and ban process.
@@ -182,6 +208,7 @@ def pick_and_ban(config, preferred_role_override=None):
         None: This function runs indefinitely until interrupted or session ends
     """
     print("🔄 Starting continuous pick and ban monitoring...")
+    shared_state.auto_pick_enabled = True
 
     is_champion_preselected = False
     is_early_default_intent_sent = False
@@ -194,7 +221,13 @@ def pick_and_ban(config, preferred_role_override=None):
     current_source_index = 0
     current_candidate_index = 0
     preselected_pick_name = None
-    _, cycle_state, hotkey_handler = _setup_cycle_hotkey(config)
+    hotkey_handlers = []
+    _, cycle_state, cycle_hotkey_handler = _setup_cycle_hotkey(config)
+    if cycle_hotkey_handler is not None:
+        hotkey_handlers.append(cycle_hotkey_handler)
+    toggle_hotkey_handler = _setup_auto_pick_toggle_hotkey(config)
+    if toggle_hotkey_handler is not None:
+        hotkey_handlers.append(toggle_hotkey_handler)
     autoselect_runes = config.get("autoselect_runes", True)
 
     try:
@@ -233,13 +266,14 @@ def pick_and_ban(config, preferred_role_override=None):
 
             # Try to preselect as soon as champ-select session is available.
             if (
-                not is_early_default_intent_sent
+                shared_state.auto_pick_enabled
+                and not is_early_default_intent_sent
                 and early_default_pick
                 and early_default_pick_id
                 and has_owned_default_preselect
             ):
                 early_intent_attempts += 1
-                if execute_preselect_intent(
+                if execute_pick_ban.execute_preselect_intent(
                     early_default_pick, early_default_pick_id, log_errors=True
                 ):
                     print(
@@ -312,18 +346,21 @@ def pick_and_ban(config, preferred_role_override=None):
                             for champ in champions_to_ban:
                                 champ_id = CHAMPION_IDS.get(champ)
                                 if champ_id and champ_id not in ally_champion_ids:
-                                    if execute_ban(action, champ, champ_id):
+                                    if execute_pick_ban.execute_ban(
+                                        action, champ, champ_id
+                                    ):
                                         # Fallback path: if early intent could not be set,
                                         # try one immediate intent right after ban completes.
                                         if (
-                                            not is_early_default_intent_sent
+                                            shared_state.auto_pick_enabled
+                                            and not is_early_default_intent_sent
                                             and not post_ban_fallback_attempted
                                             and early_default_pick
                                             and early_default_pick_id
                                             and has_owned_default_preselect
                                         ):
                                             post_ban_fallback_attempted = True
-                                            if execute_preselect_intent(
+                                            if execute_pick_ban.execute_preselect_intent(
                                                 early_default_pick,
                                                 early_default_pick_id,
                                                 log_errors=True,
@@ -340,6 +377,8 @@ def pick_and_ban(config, preferred_role_override=None):
                                     break
 
                         elif action["type"] == "pick":
+                            if not shared_state.auto_pick_enabled:
+                                continue
                             try:
                                 lane_picks_config = config["picks"].get(lane_key, {})
 
@@ -380,8 +419,10 @@ def pick_and_ban(config, preferred_role_override=None):
                                     source_candidates = source.get("candidates", [])
                                     if preselected_pick_name in source_candidates:
                                         current_source_index = source_index
-                                        current_candidate_index = source_candidates.index(
-                                            preselected_pick_name
+                                        current_candidate_index = (
+                                            source_candidates.index(
+                                                preselected_pick_name
+                                            )
                                         )
                                         found_preselected = True
                                         break
@@ -471,7 +512,7 @@ def pick_and_ban(config, preferred_role_override=None):
 
                             if not is_champion_preselected:
                                 champ_id_to_preselect = CHAMPION_IDS.get(best_pick)
-                                preselect_success = execute_preselect(
+                                preselect_success = execute_pick_ban.execute_preselect(
                                     action, best_pick, champ_id_to_preselect
                                 )
                                 if preselect_success:
@@ -502,6 +543,8 @@ def pick_and_ban(config, preferred_role_override=None):
                             if sleep_time > 0:
                                 remaining_sleep = sleep_time
                                 while remaining_sleep > 0:
+                                    if not shared_state.auto_pick_enabled:
+                                        break
                                     interval = min(0.2, remaining_sleep)
                                     time.sleep(interval)
                                     remaining_sleep -= interval
@@ -538,9 +581,13 @@ def pick_and_ban(config, preferred_role_override=None):
                                     ):
                                         is_champion_preselected = False
                                         preselected_pick_name = None
-                                        champ_id_to_preselect = CHAMPION_IDS.get(best_pick)
-                                        preselect_success = execute_preselect(
-                                            action, best_pick, champ_id_to_preselect
+                                        champ_id_to_preselect = CHAMPION_IDS.get(
+                                            best_pick
+                                        )
+                                        preselect_success = (
+                                            execute_pick_ban.execute_preselect(
+                                                action, best_pick, champ_id_to_preselect
+                                            )
                                         )
                                         if preselect_success:
                                             is_champion_preselected = True
@@ -551,6 +598,9 @@ def pick_and_ban(config, preferred_role_override=None):
                                             f"candidate {candidate_index + 1}/{len(pick_candidate_sources[source_index].get('candidates', []))}: "
                                             f"{best_pick}"
                                         )
+
+                            if not shared_state.auto_pick_enabled:
+                                continue
 
                             # Check if already locked in before waiting
                             if is_champion_locked_in():
@@ -612,8 +662,13 @@ def pick_and_ban(config, preferred_role_override=None):
                                 if not current_pick_action:
                                     break
 
+                                if not shared_state.auto_pick_enabled:
+                                    break
+
                                 lock_attempts += 1
-                                if execute_pick(current_pick_action, best_pick, champ_id):
+                                if execute_pick_ban.execute_pick(
+                                    current_pick_action, best_pick, champ_id
+                                ):
                                     did_lock = True
                                     break
                                 time.sleep(0.2)
@@ -643,8 +698,8 @@ def pick_and_ban(config, preferred_role_override=None):
     except Exception as e:
         log_and_discord(f"❌ Error in pick and ban loop: {e}")
     finally:
-        if hotkey_handler is not None:
+        for handler in hotkey_handlers:
             try:
-                keyboard.remove_hotkey(hotkey_handler)
+                keyboard.remove_hotkey(handler)
             except Exception:
                 pass

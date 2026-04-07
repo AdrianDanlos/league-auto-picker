@@ -186,4 +186,14 @@ def validate_config(config):
                 "'cycle_counter_hotkey' must be a non-empty string (example: 'f8')."
             )
 
+    if "toggle_auto_pick_hotkey" in config:
+        toggle_auto_pick_hotkey = config.get("toggle_auto_pick_hotkey")
+        if (
+            not isinstance(toggle_auto_pick_hotkey, str)
+            or not toggle_auto_pick_hotkey.strip()
+        ):
+            errors.append(
+                "'toggle_auto_pick_hotkey' must be a non-empty string (example: 'f9')."
+            )
+
     return errors, warnings

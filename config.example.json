@@ -243,6 +243,7 @@
   "random_mode_active": true,
   "autoselect_runes": true,
   "cycle_counter_hotkey": "f8",
+  "toggle_auto_pick_hotkey": "f9",
   "preferred_role": "middle",
   "messages": []
 }
