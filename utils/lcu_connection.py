@@ -62,3 +62,38 @@ def get_session():
     except Exception as e:
         print(f"⚠️  Error connecting to League client: {e}")
         return None
+
+
+def get_current_champion_id_lcu():
+    """
+    GET /lol-champ-select/v1/current-champion when full session JSON is unavailable.
+
+    Used as a fallback after champ select ends so Discord can still show the correct
+    champion (e.g. after trades) if /session no longer returns 200.
+    """
+    try:
+        r = requests.get(
+            f"{get_base_url()}/lol-champ-select/v1/current-champion",
+            auth=get_auth(),
+            verify=False,
+        )
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        if isinstance(data, int):
+            return data if data > 0 else None
+        if isinstance(data, dict):
+            for key in ("championId", "id"):
+                v = data.get(key)
+                if isinstance(v, int) and v > 0:
+                    return v
+        return None
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
+        RuntimeError,
+    ):
+        raise LeagueClientDisconnected()
+    except Exception as e:
+        print(f"⚠️  Error fetching current champion from LCU: {e}")
+        return None

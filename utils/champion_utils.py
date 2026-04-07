@@ -158,6 +158,54 @@ def is_champion_available(
         return False
 
 
+def _pick_action_champion_id_for_local_player(session):
+    """Pick action championId for the local player (may be stale after a champion trade)."""
+    if not session:
+        return None
+    my_id = session.get("localPlayerCellId")
+    if my_id is None:
+        return None
+    for actions in session.get("actions", []):
+        for a in actions:
+            if a.get("actorCellId") == my_id and a.get("type") == "pick":
+                return a.get("championId", 0)
+    return None
+
+
+def get_final_local_champion_id_from_session(session):
+    """
+    Champion ID for the local player from champ-select session.
+
+    Prefers myTeam[].championId for the local cell (updated after champion trades),
+    then falls back to the completed pick action's championId.
+    """
+    if not session:
+        return None
+    my_cell_id = session.get("localPlayerCellId")
+    if my_cell_id is None:
+        return None
+    for p in session.get("myTeam", []):
+        if p.get("cellId") == my_cell_id:
+            cid = p.get("championId") or 0
+            if cid:
+                return cid
+    pick_cid = _pick_action_champion_id_for_local_player(session)
+    return pick_cid if pick_cid else None
+
+
+def get_final_local_champion_name(session):
+    """
+    Display name for the local player's champion from the session (post-trade safe).
+
+    Returns None if no champion ID could be resolved or ID is unknown in Data Dragon.
+    """
+    cid = get_final_local_champion_id_from_session(session)
+    if not cid:
+        return None
+    names = fetch_champion_names()
+    return names.get(cid)
+
+
 def is_champion_locked_in():
     """Check if a champion is already locked in."""
     session = get_session()
@@ -172,9 +220,6 @@ def is_champion_locked_in():
 def get_locked_in_champion():
     """Get the ID of the currently locked in champion."""
     session = get_session()
-    my_id = session["localPlayerCellId"]
-    for actions in session["actions"]:
-        for a in actions:
-            if a.get("actorCellId") == my_id and a.get("type") == "pick":
-                return a.get("championId", 0)
-    return None
+    if not session:
+        return None
+    return _pick_action_champion_id_for_local_player(session)

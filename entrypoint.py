@@ -7,11 +7,12 @@ import utils.lcu_connection as lcu
 
 from features.post_game.end_of_game_actions import start_end_of_game_actions
 from features.discord_message import (
+    create_discord_message,
+    get_game_data,
     send_discord_pre_game_message,
 )
 from features.accept_queue import accept_queue
 from features.pick_and_ban import pick_and_ban
-from features.discord_message import get_game_data
 from features.decline_swap_requests import decline_incoming_swap_requests
 from features.swap_role import swap_role
 from features.swap_pick_position import swap_pick_position
@@ -23,8 +24,11 @@ from features.session_lane_prompt import (
 from utils import (
     get_base_url,
     get_auth,
+    get_current_champion_id_lcu,
     get_session,
     get_queueType,
+    get_final_local_champion_name,
+    fetch_champion_names,
     LeagueClientDisconnected,
 )
 from utils.logger import logger
@@ -213,6 +217,18 @@ def main():
                 pick_ban_thread.join()
                 swap_position_thread.join()
                 handle_incoming_swap_requests_thread.join()
+
+                session = get_session()
+                if session:
+                    final_name = get_final_local_champion_name(session)
+                    if final_name:
+                        create_discord_message(final_name, session)
+                else:
+                    fallback_id = get_current_champion_id_lcu()
+                    if fallback_id:
+                        fname = fetch_champion_names().get(fallback_id)
+                        if fname:
+                            shared_state.game_data["picked_champion"] = fname
 
                 game_data = get_game_data()
                 send_discord_pre_game_message(game_data)

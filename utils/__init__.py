@@ -8,6 +8,7 @@ into organized modules based on their functionality.
 from .lcu_connection import (
     get_auth,
     get_base_url,
+    get_current_champion_id_lcu,
     get_lcu_credentials,
     get_session,
 )
@@ -26,6 +27,8 @@ from .champion_utils import (
     fetch_champion_names,
     get_champion_name_by_id,
     get_current_summoner_id,
+    get_final_local_champion_id_from_session,
+    get_final_local_champion_name,
     get_owned_champion_ids,
     is_champion_available,
     is_champion_locked_in,
@@ -40,6 +43,7 @@ __all__ = [
     # LCU Connection
     "get_auth",
     "get_base_url",
+    "get_current_champion_id_lcu",
     "get_lcu_credentials",
     "get_session",
     # Rank and Gameflow
@@ -58,6 +62,8 @@ __all__ = [
     "fetch_champion_names",
     "get_champion_name_by_id",
     "get_current_summoner_id",
+    "get_final_local_champion_id_from_session",
+    "get_final_local_champion_name",
     "get_owned_champion_ids",
     "is_champion_available",
     "is_champion_locked_in",
