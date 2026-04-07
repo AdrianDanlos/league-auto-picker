@@ -17,6 +17,7 @@ LANE_OPTIONS = ["top", "jungle", "middle", "bottom", "utility"]
 _lock = threading.Lock()
 _is_prompt_active = False
 _selected_role = None
+_selected_champ_select_message = None
 _root = None
 _dismiss_reason = None
 
@@ -30,7 +31,7 @@ def _normalize_role(role):
 
 def prompt_session_lane_selection(default_role):
     """Show a non-blocking lane prompt in a background UI thread."""
-    global _is_prompt_active, _selected_role, _dismiss_reason
+    global _is_prompt_active, _selected_role, _selected_champ_select_message, _dismiss_reason
 
     if not _tk_available:
         return
@@ -40,6 +41,7 @@ def prompt_session_lane_selection(default_role):
             return
         _is_prompt_active = True
         _selected_role = None
+        _selected_champ_select_message = None
         _dismiss_reason = None
 
     prompt_thread = threading.Thread(
@@ -56,7 +58,7 @@ def dismiss_lane_prompt_for_game_found():
 
     This ensures config.json preferred_role is used for the current session.
     """
-    global _is_prompt_active, _dismiss_reason, _selected_role
+    global _is_prompt_active, _dismiss_reason, _selected_role, _selected_champ_select_message
 
     with _lock:
         if not _is_prompt_active:
@@ -64,6 +66,7 @@ def dismiss_lane_prompt_for_game_found():
         _is_prompt_active = False
         _dismiss_reason = "game_found"
         _selected_role = None
+        _selected_champ_select_message = None
         current_root = _root
 
     if current_root:
@@ -102,8 +105,25 @@ def consume_session_preferred_role(config_preferred_role, wait_for_selection_sec
     return _normalize_role(config_preferred_role) or "middle"
 
 
+def consume_session_champ_select_message():
+    """
+    Return a custom champ-select chat message for this session (if any), else None.
+
+    None means use config.json \"messages\" as today. The value is consumed once.
+    """
+    global _selected_champ_select_message
+
+    with _lock:
+        if _selected_champ_select_message is None:
+            return None
+        msg = _selected_champ_select_message
+        _selected_champ_select_message = None
+    stripped = msg.strip() if isinstance(msg, str) else ""
+    return stripped if stripped else None
+
+
 def _run_prompt_window(default_role):
-    global _root, _is_prompt_active, _selected_role, _dismiss_reason
+    global _root, _is_prompt_active, _selected_role, _selected_champ_select_message, _dismiss_reason
 
     default_value = _normalize_role(default_role) or "middle"
 
@@ -142,15 +162,29 @@ def _run_prompt_window(default_role):
         state="readonly",
         width=16,
     )
-    dropdown.grid(row=1, column=0, pady=(0, 10), sticky="ew")
+    dropdown.grid(row=1, column=0, pady=(0, 8), sticky="ew")
     dropdown.focus_set()
 
+    ttk.Label(
+        container,
+        text="Champ select chat (optional — leave empty for config messages):",
+        wraplength=320,
+    ).grid(row=2, column=0, pady=(0, 4), sticky="w")
+
+    chat_message_var = tk.StringVar(value="")
+    chat_entry = ttk.Entry(container, textvariable=chat_message_var, width=40)
+    chat_entry.grid(row=3, column=0, pady=(0, 10), sticky="ew")
+
     def on_confirm():
-        global _is_prompt_active, _selected_role, _dismiss_reason
+        global _is_prompt_active, _selected_role, _selected_champ_select_message, _dismiss_reason
         with _lock:
             if not _is_prompt_active:
                 return
             _selected_role = _normalize_role(selected_lane.get())
+            raw_msg = chat_message_var.get()
+            _selected_champ_select_message = (
+                raw_msg.strip() if isinstance(raw_msg, str) and raw_msg.strip() else None
+            )
             _is_prompt_active = False
             _dismiss_reason = "selected"
         print(f"✅ Session lane selected: {_selected_role}")
@@ -161,7 +195,7 @@ def _run_prompt_window(default_role):
         return
 
     ttk.Button(container, text="Use lane", command=on_confirm).grid(
-        row=2, column=0, sticky="e"
+        row=4, column=0, sticky="e"
     )
 
     root.protocol("WM_DELETE_WINDOW", on_window_close)
