@@ -1,5 +1,28 @@
 from constants import DRAFT_PICK_CODE, FLEX_CODE, SOLOQ_CODE
 
+# Canonical lane keys returned by normalize_lcu_lane (matches config.json lane keys).
+STANDARD_LCU_LANES = frozenset(
+    {"TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"}
+)
+
+
+def normalize_lcu_lane(role):
+    """
+    Map LCU assignedPosition strings and config aliases to canonical uppercase lanes:
+    TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY.
+    """
+    role_key = str(role or "").strip().upper()
+    if not role_key:
+        return ""
+    aliases = {
+        "MID": "MIDDLE",
+        "SUP": "UTILITY",
+        "SUPPORT": "UTILITY",
+        "ADC": "BOTTOM",
+        "BOT": "BOTTOM",
+    }
+    return aliases.get(role_key, role_key)
+
 
 def get_assigned_lane(session):
     """Get the player's assigned lane from the session."""

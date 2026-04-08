@@ -21,6 +21,8 @@ from .session_utils import (
     get_queueType,
     is_still_our_turn_to_pick,
     get_summoner_name,
+    normalize_lcu_lane,
+    STANDARD_LCU_LANES,
 )
 from .champion_utils import (
     fetch_champion_ids,
@@ -57,6 +59,8 @@ __all__ = [
     "get_queueType",
     "is_still_our_turn_to_pick",
     "get_summoner_name",
+    "normalize_lcu_lane",
+    "STANDARD_LCU_LANES",
     # Champion utilities
     "fetch_champion_ids",
     "fetch_champion_names",

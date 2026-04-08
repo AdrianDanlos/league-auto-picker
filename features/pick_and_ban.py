@@ -19,24 +19,12 @@ from utils import (
     get_session,
     is_champion_locked_in,
     is_still_our_turn_to_pick,
+    normalize_lcu_lane,
     shared_state,
 )
 from features.select_champion_logic import build_pick_candidate_sources
 import features.execute_pick_ban as execute_pick_ban
 from features.discord_message import create_discord_message
-
-
-def normalize_lane_key(role):
-    """Normalize lane names/aliases to config keys."""
-    role_key = str(role or "").strip().upper()
-    aliases = {
-        "MID": "MIDDLE",
-        "SUP": "UTILITY",
-        "SUPPORT": "UTILITY",
-        "ADC": "BOTTOM",
-        "BOT": "BOTTOM",
-    }
-    return aliases.get(role_key, role_key)
 
 
 def _first_owned_default_pick(default_names, champion_ids, owned_champion_ids):
@@ -250,7 +238,7 @@ def pick_and_ban(config, preferred_role_override=None):
                 ownership_warning_logged = False
             actions = session.get("actions", [])
             my_cell_id = session.get("localPlayerCellId")
-            preferred_lane_key = normalize_lane_key(
+            preferred_lane_key = normalize_lcu_lane(
                 preferred_role_override or config.get("preferred_role", "")
             )
 
@@ -317,7 +305,10 @@ def pick_and_ban(config, preferred_role_override=None):
                 log_and_discord("Could not determine assigned lane.")
                 time.sleep(4)
                 continue
-            lane_key = assigned_lane.upper()
+            lane_key = normalize_lcu_lane(assigned_lane)
+            if not lane_key:
+                time.sleep(4)
+                continue
 
             # Collect all championIds picked (hovered or locked in) by teammates
             my_team_cell_ids = {p["cellId"] for p in session.get("myTeam", [])}
@@ -681,7 +672,9 @@ def pick_and_ban(config, preferred_role_override=None):
                                     print(
                                         "ℹ️ Rune auto-select disabled in config. Skipping rune setup."
                                     )
-                                select_summoner_spells(config, best_pick, assigned_lane)
+                                select_summoner_spells(
+                                    config, best_pick, lane_key.lower()
+                                )
                                 break
                             if lock_attempts > 0:
                                 log_and_discord(

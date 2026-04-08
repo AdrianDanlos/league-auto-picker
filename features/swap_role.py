@@ -2,8 +2,16 @@ import requests
 import time
 
 from utils.logger import log_and_discord
-from utils import get_auth, get_base_url, handle_connection_errors
-from utils.session_utils import get_assigned_lane
+from utils import (
+    get_assigned_lane,
+    get_auth,
+    get_base_url,
+    get_session,
+    handle_connection_errors,
+    normalize_lcu_lane,
+    STANDARD_LCU_LANES,
+)
+from utils.exceptions import LeagueClientDisconnected
 
 
 @handle_connection_errors
@@ -52,6 +60,14 @@ def swap_role(session, config, preferred_role_override=None):
     if not session:
         return
 
+    # Use a fresh session so assignedPosition is not stale (roles can lag the first snapshot).
+    try:
+        fresh = get_session()
+        if fresh and isinstance(fresh, dict) and not fresh.get("errorCode"):
+            session = fresh
+    except LeagueClientDisconnected:
+        return
+
     my_cell_id = session.get("localPlayerCellId")
     my_team = session.get("myTeam", [])
 
@@ -62,13 +78,26 @@ def swap_role(session, config, preferred_role_override=None):
             assigned_role = participant.get("assignedPosition")
             break
 
-    if not assigned_role:
+    if not assigned_role or not str(assigned_role).strip():
         log_and_discord("[Role Swap] Could not determine assigned role.")
         return
 
-    preferred_role = preferred_role_override or config.get("preferred_role", "")
-    preferred_role = str(preferred_role).upper()
-    assigned_role = str(assigned_role).upper()
+    assigned_role = normalize_lcu_lane(assigned_role)
+    preferred_raw = preferred_role_override or config.get("preferred_role", "")
+    preferred_role = normalize_lcu_lane(preferred_raw)
+
+    if not preferred_role or preferred_role not in STANDARD_LCU_LANES:
+        log_and_discord(
+            f"[Role Swap] Invalid or unknown preferred role '{preferred_raw!r}'; skipping swap."
+        )
+        return
+
+    if assigned_role not in STANDARD_LCU_LANES:
+        print(
+            "[Role Swap] Assigned role not finalized yet; skipping role swap for now."
+        )
+        return
+
     if assigned_role == preferred_role:
         print(
             f"[Role Swap] Assigned role '{assigned_role}' is your preferred role. No swap needed."
@@ -78,11 +107,13 @@ def swap_role(session, config, preferred_role_override=None):
     # Find a teammate with the preferred role
     swap_target = None
     for participant in my_team:
-        participant_role = str(participant.get("assignedPosition", "")).upper()
-        if (
-            participant.get("cellId") != my_cell_id
-            and participant_role == preferred_role
-        ):
+        if participant.get("cellId") == my_cell_id:
+            continue
+        raw_pos = participant.get("assignedPosition")
+        if not raw_pos or not str(raw_pos).strip():
+            continue
+        participant_role = normalize_lcu_lane(raw_pos)
+        if participant_role == preferred_role:
             swap_target = participant
             break
 
@@ -124,7 +155,8 @@ def swap_role(session, config, preferred_role_override=None):
         request_res = requests.post(request_swap_url, auth=get_auth(), verify=False)
         if request_res.status_code == 204 or request_res.status_code == 200:
             print(
-                f"[Role Swap] Requested role swap with {preferred_role} (cellId {target_cell_id}, swapId {swap_id})"
+                f"[Role Swap] Requested swap to take {preferred_role} "
+                f"(teammate currently in that role: cellId {target_cell_id}, swapId {swap_id})"
             )
 
             # Monitor the swap request status
@@ -140,8 +172,10 @@ def swap_role(session, config, preferred_role_override=None):
                 wait_time += 1
 
                 try:
-                    # Check current session to see if roles have actually changed
-                    current_role = str(get_assigned_lane(session) or "").upper()
+                    live = get_session()
+                    if not live or not isinstance(live, dict) or live.get("errorCode"):
+                        continue
+                    current_role = normalize_lcu_lane(get_assigned_lane(live))
 
                     # If our role changed to the preferred role, the swap was accepted
                     if current_role == preferred_role and current_role != initial_role:
