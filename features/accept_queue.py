@@ -3,18 +3,13 @@ import time
 
 from utils.logger import log_and_discord
 from utils import get_auth, get_base_url, get_session, LeagueClientDisconnected
-from utils import shared_state
-from features.session_lane_prompt import (
-    prompt_session_lane_selection,
-    dismiss_lane_prompt_for_game_found,
-)
+from features.session_lane_prompt import dismiss_lane_prompt_for_game_found
 from features.discord_message import send_discord_champ_select_started_message
 
 
 def accept_queue():
     """Polls the ready-check endpoint and accepts the match if found."""
     last_state = None
-    popup_shown_this_queue_cycle = False
     while True:
         try:
             r = requests.get(
@@ -37,11 +32,6 @@ def accept_queue():
                     # In queue: state invalid
                     elif state in ["None", "Invalid"]:
                         print("🟢 Waiting for queue pop...")
-                        if not popup_shown_this_queue_cycle:
-                            prompt_session_lane_selection(
-                                shared_state.config_preferred_role
-                            )
-                            popup_shown_this_queue_cycle = True
                     else:
                         print(f"🔄 Queue state: {state}. Waiting...")
                     last_state = state

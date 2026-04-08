@@ -22,6 +22,7 @@ from features.session_lane_prompt import (
     consume_session_champ_select_message,
     consume_session_preferred_role,
 )
+from features.lobby_lane_prompt_watcher import start_lobby_lane_prompt_watcher
 from utils import (
     get_base_url,
     get_auth,
@@ -141,6 +142,7 @@ def main():
     try:
         # Start end of game actions in a single long-lived thread
         start_end_of_game_thread()
+        start_lobby_lane_prompt_watcher()
 
         while True:
             try:

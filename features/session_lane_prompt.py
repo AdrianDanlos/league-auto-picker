@@ -52,11 +52,13 @@ def prompt_session_lane_selection(default_role):
     prompt_thread.start()
 
 
-def dismiss_lane_prompt_for_game_found():
+def dismiss_lane_prompt(reason="game_found"):
     """
-    Dismiss the lane prompt when a game is found.
+    Close the lane prompt without applying session overrides.
 
-    This ensures config.json preferred_role is used for the current session.
+    reason:
+      - game_found: match reached champion select before the user confirmed.
+      - lobby_exit: user left the lobby (e.g. home) before confirming.
     """
     global _is_prompt_active, _dismiss_reason, _selected_role, _selected_champ_select_message
 
@@ -64,7 +66,7 @@ def dismiss_lane_prompt_for_game_found():
         if not _is_prompt_active:
             return
         _is_prompt_active = False
-        _dismiss_reason = "game_found"
+        _dismiss_reason = reason
         _selected_role = None
         _selected_champ_select_message = None
         current_root = _root
@@ -74,6 +76,16 @@ def dismiss_lane_prompt_for_game_found():
             current_root.after(0, current_root.destroy)
         except Exception:
             pass
+
+
+def dismiss_lane_prompt_for_game_found():
+    """Dismiss when champion select starts before the user confirmed."""
+    dismiss_lane_prompt("game_found")
+
+
+def dismiss_lane_prompt_for_lobby_exit():
+    """Dismiss when the client returns to home while the prompt is still open."""
+    dismiss_lane_prompt("lobby_exit")
 
 
 def consume_session_preferred_role(config_preferred_role, wait_for_selection_seconds=0):
@@ -191,7 +203,7 @@ def _run_prompt_window(default_role):
         root.destroy()
 
     def on_window_close():
-        # Keep prompt active until user selects a lane or queue is found.
+        # Keep prompt active until user confirms, champ select starts, or lobby is left.
         return
 
     ttk.Button(container, text="Use lane", command=on_confirm).grid(
@@ -206,4 +218,8 @@ def _run_prompt_window(default_role):
         if _dismiss_reason == "game_found":
             print(
                 "🎮 Game found before lane selection. Using preferred_role from config.json."
+            )
+        elif _dismiss_reason == "lobby_exit":
+            print(
+                "🔄 Left lobby before lane selection. Using preferred_role from config.json."
             )
