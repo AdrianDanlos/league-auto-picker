@@ -45,6 +45,8 @@ def _eog_stats_block_available():
 
 def start_end_of_game_actions():
     message_sent = False
+    last_sent_game_id = None
+    post_game_phases = set(_EOG_PHASES_ALLOW_STATS_ENDPOINT) | {"Lobby"}
     while True:
         try:
             gameflow_phase = get_gameflow_phase()
@@ -53,23 +55,37 @@ def start_end_of_game_actions():
                 message_sent = False
 
             eog_ready = _eog_stats_block_available()
-            should_send = gameflow_phase == "EndOfGame" or (
-                eog_ready and gameflow_phase in _EOG_PHASES_ALLOW_STATS_ENDPOINT
+            should_attempt_post_game = gameflow_phase in post_game_phases and (
+                gameflow_phase == "EndOfGame" or eog_ready
             )
 
             if (
-                should_send
+                should_attempt_post_game
                 and not message_sent
                 and shared_state.current_queue_type is not None
             ):
-                print("🟡 END OF GAME gameflow_phase", gameflow_phase)
-                message_sent = True
-                game_data = get_game_data()
-                send_discord_post_game_message(
-                    sanitize_last_game_data(),
-                    get_rank_changes(),
-                    game_data["summoner_name"],
+                sanitized_last_game = sanitize_last_game_data()
+                current_game_id = (
+                    sanitized_last_game.get("game_id")
+                    if isinstance(sanitized_last_game, dict)
+                    else None
                 )
+
+                # Avoid duplicate messages for the same game.
+                if current_game_id and current_game_id == last_sent_game_id:
+                    message_sent = True
+                else:
+                    game_data = get_game_data()
+                    sent = send_discord_post_game_message(
+                        sanitized_last_game,
+                        get_rank_changes(),
+                        game_data["summoner_name"],
+                    )
+                    if sent:
+                        print("🟡 END OF GAME gameflow_phase", gameflow_phase)
+                        message_sent = True
+                        if current_game_id:
+                            last_sent_game_id = current_game_id
         except (
             requests.exceptions.ConnectionError,
             requests.exceptions.RequestException,

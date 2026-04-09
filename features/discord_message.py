@@ -13,11 +13,15 @@ def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
         # If summoner name is None we assume the data passed is null and therefore don't send the message.
         # This could happen sometimes when there is a weird state where global variables are still undefined (maybe unclosed threads)
         if not summoner_name:
-            return
+            return False
 
         # If rank_changes is None (client disconnected), don't send the message
         if rank_changes is None:
-            return
+            return False
+
+        # If upstream data fetch is not ready yet, retry on next poll.
+        if not isinstance(last_game_data, dict) or last_game_data.get("error"):
+            return False
 
         # Extract data from last_game_data
         win_loss = last_game_data.get("win_loss", {})
@@ -62,16 +66,19 @@ def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
 
         if response.status_code == 204:
             print("✅ Discord message sent with post game stats")
+            return True
         else:
             log_and_discord(
                 f"❌ Error sending discord message with post game stats: {response.status_code}"
             )
+            return False
     except LeagueClientDisconnected:
-        return
+        return False
     except Exception as e:
         log_and_discord(
             f"❌ Unexpected error sending discord message with post game stats: {e}"
         )
+        return False
 
 
 def send_discord_pre_game_message(game_data):

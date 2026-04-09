@@ -123,7 +123,6 @@ def validate_config(config):
         "random_mode_active",
         "autoselect_runes",
         "preferred_role",
-        "messages",
     ]
     for key in required_sections:
         if key not in config:
@@ -164,17 +163,13 @@ def validate_config(config):
         )
 
     messages = config.get("messages")
-    if not isinstance(messages, list):
-        errors.append("'messages' must be a list of strings.")
-    else:
-        for idx, msg in enumerate(messages):
-            if not isinstance(msg, str):
-                errors.append(f"'messages[{idx}]' must be a string.")
-
-    if not config.get("messages"):
-        warnings.append(
-            "No chat messages configured. Champ-select message sending will be skipped."
-        )
+    if "messages" in config:
+        if not isinstance(messages, list):
+            errors.append("'messages' must be a list of strings.")
+        else:
+            for idx, msg in enumerate(messages):
+                if not isinstance(msg, str):
+                    errors.append(f"'messages[{idx}]' must be a string.")
 
     if "cycle_counter_hotkey" in config:
         cycle_counter_hotkey = config.get("cycle_counter_hotkey")
