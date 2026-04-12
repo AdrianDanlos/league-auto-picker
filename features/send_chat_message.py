@@ -3,7 +3,6 @@ import random
 import json
 import threading
 
-from utils.logger import log_and_discord
 from utils import get_auth, get_base_url
 
 
@@ -20,8 +19,12 @@ def send_champ_select_message(session, message_override=None):
     if override:
         message = override
     else:
-        messages = config.get("messages")
-        if not isinstance(messages, list) or not messages:
+        raw_messages = config.get("messages")
+        if not isinstance(raw_messages, list):
+            print("[Chat] No configured messages found. Skipping chat message.")
+            return
+        messages = [m.strip() for m in raw_messages if isinstance(m, str) and m.strip()]
+        if not messages:
             print("[Chat] No configured messages found. Skipping chat message.")
             return
 
@@ -42,11 +45,10 @@ def send_champ_select_message(session, message_override=None):
         if res.status_code == 200:
             print(f"[Chat] Sent message: {message}")
         else:
-            log_and_discord(f"[Chat] Failed to send message: {res.status_code}, {res}")
+            # LCU chat failures (e.g. 400) are local only — do not notify Discord.
+            print(f"[Chat] Failed to send message: {res.status_code}, {res}")
     else:
-        log_and_discord(
-            f"[Chat] Could not find chatId in session. Session object:{session}"
-        )
+        print(f"[Chat] Could not find chatId in session. Session object:{session}")
 
 
 def schedule_champ_select_message(session, delay=20, message_override=None):
