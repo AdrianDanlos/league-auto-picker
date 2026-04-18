@@ -152,9 +152,7 @@ def sanitize_last_game_data():
 
         # Get champion information
         game_data = get_game_data()
-        champion = game_data["picked_champion"]
-        if not champion:
-            return {"error": "Could not get champion information"}
+        champion = game_data.get("picked_champion") or "Unknown"
 
         # Get KDA statistics
         kda = get_kda_stats(latest_game_data, participant_id)
@@ -178,7 +176,7 @@ def sanitize_last_game_data():
 def get_rank_changes():
     # Get queue type from game_data, with fallback
     game_data = get_game_data()
-    queue_type = game_data.get("queueType")
+    queue_type = game_data.get("queueType") or shared_state.current_queue_type
 
     try:
         # Get current (post-game) rank data

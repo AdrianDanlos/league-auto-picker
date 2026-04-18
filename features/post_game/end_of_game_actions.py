@@ -79,7 +79,7 @@ def start_end_of_game_actions():
                     sent = send_discord_post_game_message(
                         sanitized_last_game,
                         get_rank_changes(),
-                        game_data["summoner_name"],
+                        game_data.get("summoner_name"),
                     )
                     if sent:
                         print("🟡 END OF GAME gameflow_phase", gameflow_phase)

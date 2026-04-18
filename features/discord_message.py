@@ -1,19 +1,68 @@
 import requests
+import time
 from urllib.parse import quote
 from utils.logger import log_and_discord
 from utils import get_gameflow_phase, get_rank_data, LeagueClientDisconnected
-from utils import get_assigned_lane, get_region, get_queueType, get_summoner_name
+from utils import (
+    get_assigned_lane,
+    get_region,
+    get_queueType,
+    get_summoner_name,
+)
 from utils import shared_state
 
-webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoymtnU4o9br3grXkV4HJIl2WYtTAY6BQ2__D5MyAbZqpv-FsW3lEKjPcAN2"
+webhook_url = (
+    "https://discord.com/api/webhooks/1400894060276748448/"
+    "qflPvLqhtoymtnU4o9br3grXkV4HJIl2WYtTAY6BQ2__D5MyAbZqpv-FsW3lEKjPcAN2"
+)
+
+_IN_GAME_PHASES = frozenset({"GameStart", "InProgress", "Reconnect"})
+
+
+def _post_to_discord_with_retries(content, max_attempts=3, delay_seconds=1.5):
+    """Post message to Discord with retry support for transient failures."""
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = requests.post(
+                webhook_url,
+                json={"content": content},
+                timeout=(4, 10),
+            )
+            if response.status_code == 204:
+                return True
+
+            if response.status_code == 429:
+                retry_after = delay_seconds
+                if response.headers.get("Content-Type", "").startswith(
+                    "application/json"
+                ):
+                    payload = response.json()
+                    retry_after = payload.get("retry_after", delay_seconds)
+                time.sleep(max(retry_after, delay_seconds))
+                continue
+
+            # Retry 5xx errors; log and stop for other HTTP statuses.
+            if 500 <= response.status_code < 600 and attempt < max_attempts:
+                time.sleep(delay_seconds)
+                continue
+
+            log_and_discord(
+                f"❌ Error sending discord message: {response.status_code} - {response.text}"
+            )
+            return False
+        except requests.exceptions.RequestException as e:
+            if attempt < max_attempts:
+                time.sleep(delay_seconds)
+                continue
+            log_and_discord(f"❌ Error sending discord message after retries: {e}")
+            return False
+
+    return False
 
 
 def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
     try:
-        # If summoner name is None we assume the data passed is null and therefore don't send the message.
-        # This could happen sometimes when there is a weird state where global variables are still undefined (maybe unclosed threads)
-        if not summoner_name:
-            return False
+        player_name = summoner_name or "Player"
 
         # If rank_changes is None (client disconnected), don't send the message
         if rank_changes is None:
@@ -53,30 +102,23 @@ def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
         # Build the formatted content
         content = (
             "```diff\n"
-            f"🎮 {summoner_name}\n\n"
+            f"🎮 {player_name}\n\n"
             f"{result_emoji} {result_text} – {champion} | {lp_change_text} LP\n\n"
             f"⚔️ KDA: {kills}/{deaths}/{assists} ({kda_ratio})\n\n"
             f"🏆 {tier} {division} / {current_lp} LP"
             "```"
         )
 
-        data = {"content": content}
-
-        response = requests.post(webhook_url, json=data)
-
-        if response.status_code == 204:
+        if _post_to_discord_with_retries(content):
             print("✅ Discord message sent with post game stats")
             return True
-        else:
-            log_and_discord(
-                f"❌ Error sending discord message with post game stats: {response.status_code}"
-            )
-            return False
+        return False
     except LeagueClientDisconnected:
         return False
     except Exception as e:
         log_and_discord(
-            f"❌ Unexpected error sending discord message with post game stats: {e}"
+            "❌ Unexpected error sending discord message "
+            f"with post game stats: {e}"
         )
         return False
 
@@ -86,44 +128,48 @@ def send_discord_pre_game_message(game_data):
         tier, division, wins, loses, lp = get_rank_data(
             game_data.get("queueType", "Unknown")
         ).values()
-        gameflow_phase = get_gameflow_phase()
+        # Phase can stay in GameStart briefly before moving to InProgress.
+        phase_retries = 45
+        while phase_retries > 0:
+            gameflow_phase = get_gameflow_phase()
+            if gameflow_phase in _IN_GAME_PHASES:
+                break
+            phase_retries -= 1
+            time.sleep(1)
+        else:
+            return False
 
-        if gameflow_phase == "InProgress":
-            summoner_name = quote(game_data.get("summoner_name", "Unknown"))
-            region = game_data.get("region", "Unknown")
+        summoner_name = quote(game_data.get("summoner_name", "Unknown"))
+        region = game_data.get("region", "Unknown")
 
-            porofessor_url = build_porofessor_url(region, summoner_name)
-            opgg_url = build_opgg_url(region, summoner_name)
+        porofessor_url = build_porofessor_url(region, summoner_name)
+        opgg_url = build_opgg_url(region, summoner_name)
 
-            styled_content = (
-                f"```ansi\n"
-                f"\n\n"
-                f"\u001b[1;32m🎮 ═══ GAME STARTED ═══ 🎮\u001b[0m\n"
-                f"```\n"
-                f"👤 **Player:** `{game_data.get('summoner_name', 'Player')}`\n"
-                f"⚔️ **Champion:** `{game_data.get('picked_champion', 'None')}`\n"
-                f"🛡️ **Role:** `{game_data.get('assigned_lane', 'Unknown')}`\n"
-                f"🏆 **Queue:** {game_data.get('queueType', 'Unknown')}\n"
-                f"📊 **Rank:** {tier} {division} | **Wins:** {wins} | **Losses:** {loses}\n\n"
-                f"🌍 **Porofessor:** <{porofessor_url}>\n"
-                f"🌍 **OPGG:** <{opgg_url}>\n\n\n"
-            )
+        styled_content = (
+            f"```ansi\n"
+            f"\n\n"
+            f"\u001b[1;32m🎮 ═══ GAME STARTED ═══ 🎮\u001b[0m\n"
+            f"```\n"
+            f"👤 **Player:** `{game_data.get('summoner_name', 'Player')}`\n"
+            f"⚔️ **Champion:** `{game_data.get('picked_champion', 'None')}`\n"
+            f"🛡️ **Role:** `{game_data.get('assigned_lane', 'Unknown')}`\n"
+            f"🏆 **Queue:** {game_data.get('queueType', 'Unknown')}\n"
+            f"📊 **Rank:** {tier} {division} | "
+            f"**Wins:** {wins} | **Losses:** {loses}\n\n"
+            f"🌍 **Porofessor:** <{porofessor_url}>\n"
+            f"🌍 **OPGG:** <{opgg_url}>\n\n\n"
+        )
 
-            data = {"content": styled_content}
-
-            response = requests.post(webhook_url, json=data)
-
-            if response.status_code == 204:
-                print("✅ Discord message sent")
-            else:
-                log_and_discord(
-                    f"❌ Error sending discord message: {response.status_code}"
-                )
+        if _post_to_discord_with_retries(styled_content):
+            print("✅ Discord message sent")
+            return True
+        return False
 
     except LeagueClientDisconnected:
-        return
+        return False
     except Exception as e:
         log_and_discord(f"❌ Unexpected error sending discord message: {e}")
+        return False
 
 
 def send_discord_champ_select_started_message(session):
@@ -137,19 +183,14 @@ def send_discord_champ_select_started_message(session):
             f"👤 **Player:** `{player_name}`\n"
             "⚔️ **Status:** Champion select is live!"
         )
-        response = requests.post(webhook_url, json={"content": content})
-
-        if response.status_code == 204:
+        if _post_to_discord_with_retries(content):
             print("✅ Discord champ select start message sent")
-        else:
-            log_and_discord(
-                f"❌ Error sending champ select start discord message: {response.status_code}"
-            )
     except LeagueClientDisconnected:
         return
     except Exception as e:
         log_and_discord(
-            f"❌ Unexpected error sending champ select start discord message: {e}"
+            "❌ Unexpected error sending champ select start "
+            f"discord message: {e}"
         )
 
 
