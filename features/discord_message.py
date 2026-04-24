@@ -1,6 +1,8 @@
 import requests
 import time
+import os
 from urllib.parse import quote
+from dotenv import load_dotenv
 from utils.logger import log_and_discord
 from utils import get_gameflow_phase, get_rank_data, LeagueClientDisconnected
 from utils import (
@@ -11,16 +13,17 @@ from utils import (
 )
 from utils import shared_state
 
-webhook_url = (
-    "https://discord.com/api/webhooks/1400894060276748448/"
-    "qflPvLqhtoymtnU4o9br3grXkV4HJIl2WYtTAY6BQ2__D5MyAbZqpv-FsW3lEKjPcAN2"
-)
+load_dotenv()
 
 _IN_GAME_PHASES = frozenset({"GameStart", "InProgress", "Reconnect"})
 
 
 def _post_to_discord_with_retries(content, max_attempts=3, delay_seconds=1.5):
     """Post message to Discord with retry support for transient failures."""
+    webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
+    if not webhook_url:
+        return False
+
     for attempt in range(1, max_attempts + 1):
         try:
             response = requests.post(
@@ -125,11 +128,13 @@ def send_discord_post_game_message(last_game_data, rank_changes, summoner_name):
 
 def send_discord_pre_game_message(game_data):
     try:
-        tier, division, wins, loses, lp = get_rank_data(
-            game_data.get("queueType", "Unknown")
-        ).values()
+        rank_data = get_rank_data(game_data.get("queueType", "Unknown"))
+        tier = rank_data.get("tier", "Unknown")
+        division = rank_data.get("division", "Unknown")
+        wins = rank_data.get("wins", 0)
+        loses = rank_data.get("loses", 0)
         # Phase can stay in GameStart briefly before moving to InProgress.
-        phase_retries = 45
+        phase_retries = 90
         while phase_retries > 0:
             gameflow_phase = get_gameflow_phase()
             if gameflow_phase in _IN_GAME_PHASES:

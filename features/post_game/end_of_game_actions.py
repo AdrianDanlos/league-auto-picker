@@ -59,11 +59,7 @@ def start_end_of_game_actions():
                 gameflow_phase == "EndOfGame" or eog_ready
             )
 
-            if (
-                should_attempt_post_game
-                and not message_sent
-                and shared_state.current_queue_type is not None
-            ):
+            if should_attempt_post_game and not message_sent:
                 sanitized_last_game = sanitize_last_game_data()
                 current_game_id = (
                     sanitized_last_game.get("game_id")

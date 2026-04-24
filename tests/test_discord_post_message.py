@@ -1,6 +1,9 @@
 import requests
+import os
+from dotenv import load_dotenv
 
-webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoymtnU4o9br3grXkV4HJIl2WYtTAY6BQ2__D5MyAbZqpv-FsW3lEKjPcAN2"
+load_dotenv()
+webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
 
 
 try:
@@ -58,13 +61,16 @@ try:
 
     data = {"content": content}
 
-    response = requests.post(webhook_url, json=data)
-
-    if response.status_code == 204:
-        print("✅ Discord message sent with post game stats")
+    if not webhook_url:
+        print("⚠️ DISCORD_WEBHOOK_URL is not set. Skipping send.")
     else:
-        print(
-            f"❌ Error sending discord message with post game stats: {response.status_code}"
-        )
+        response = requests.post(webhook_url, json=data)
+
+        if response.status_code == 204:
+            print("✅ Discord message sent with post game stats")
+        else:
+            print(
+                f"❌ Error sending discord message with post game stats: {response.status_code}"
+            )
 except Exception as e:
     print(f"❌ Unexpected error sending discord message with post game stats: {e}")

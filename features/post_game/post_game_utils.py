@@ -176,7 +176,9 @@ def sanitize_last_game_data():
 def get_rank_changes():
     # Get queue type from game_data, with fallback
     game_data = get_game_data()
-    queue_type = game_data.get("queueType") or shared_state.current_queue_type
+    queue_type = (
+        game_data.get("queueType") or shared_state.current_queue_type or "UNKNOWN"
+    )
 
     try:
         # Get current (post-game) rank data
@@ -195,6 +197,15 @@ def get_rank_changes():
     summoner_id = get_summoner_id()
     participant_id = get_participant_id(latest_game_data, summoner_id)
     win_loss = get_win_loss_status(latest_game_data, participant_id)
+    if not isinstance(win_loss, dict):
+        return {
+            "post_game": {
+                "tier": current_tier,
+                "division": current_division,
+                "lp": current_lp,
+            },
+            "lp_change": 0,
+        }
     lp_change = calculate_lp_change(
         win_loss, pre_division, current_division, pre_lp, current_lp
     )
@@ -224,7 +235,8 @@ def calculate_lp_change(win_loss, pre_division, current_division, pre_lp, curren
 
 
 def get_participant_id(latest_game, summoner_id):
-    for participant_identity in latest_game["participantIdentities"]:
-        if participant_identity["player"]["summonerId"] == summoner_id:
-            return participant_identity["participantId"]
+    for participant_identity in latest_game.get("participantIdentities", []):
+        player = participant_identity.get("player", {})
+        if player.get("summonerId") == summoner_id:
+            return participant_identity.get("participantId")
     return None

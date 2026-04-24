@@ -40,6 +40,10 @@ from utils.config_validation import validate_config
 # Disable warnings for self-signed certs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+_SUPPORTED_AUTOMATION_QUEUES = frozenset(
+    {"RANKED_SOLO_5x5", "RANKED_FLEX_SR", "NORMAL_DRAFT"}
+)
+
 
 # === Load config ===
 try:
@@ -180,13 +184,22 @@ def main():
                 # This blocks until queue is accepted
                 session = wait_for_champ_select()
 
-                # Save LP before game starts
+                # Save queue context for Discord + post-game handling.
                 shared_state.current_queue_type = get_queueType(session)
-                if not shared_state.current_queue_type:
-                    # Skip current iteration of loop. The queue is not supported.
-                    continue
-
                 save_pre_game_lp(shared_state.current_queue_type)
+
+                if shared_state.current_queue_type not in _SUPPORTED_AUTOMATION_QUEUES:
+                    # For unsupported queues we still emit Discord pre/post-game messages,
+                    # but skip pick/ban automation that relies on draft-specific flows.
+                    create_discord_message("Unknown", session)
+                    send_discord_pre_game_message(get_game_data())
+                    print(
+                        "ℹ️ Unsupported queue for auto-pick: "
+                        f"{shared_state.current_queue_type}. "
+                        "Discord notifications remain enabled."
+                    )
+                    time.sleep(2)
+                    continue
 
                 session_preferred_role = consume_session_preferred_role(
                     config.get("preferred_role"), wait_for_selection_seconds=8

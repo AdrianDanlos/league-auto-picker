@@ -2,6 +2,9 @@ import sys
 from datetime import datetime
 import os
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # Simple logging system
@@ -64,10 +67,13 @@ def log_print(*args, **kwargs):
     print(*args, **kwargs)
 
 
-webhook_url = "https://discord.com/api/webhooks/1401132002693873674/2QGQjoLaeESr4QhK6qMt3ortI5ChkZIIfp3L3uznlgBDI96C1IBAmVWkklVc8LeyoJ-v"
-
-
 def send_discord_error_message(error, summoner_name=None):
+    webhook_url = os.getenv("DISCORD_ERROR_WEBHOOK_URL") or os.getenv(
+        "DISCORD_WEBHOOK_URL"
+    )
+    if not webhook_url:
+        return
+
     try:
         data = {"content": f"{summoner_name or 'Unknown'}: {error}"}
         response = requests.post(webhook_url, json=data)

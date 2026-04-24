@@ -1,6 +1,10 @@
 import requests
 import psutil
 import re
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def get_lcu_credentials():
@@ -14,7 +18,7 @@ def get_lcu_credentials():
     raise RuntimeError("League client not found.")
 
 
-webhook_url = "https://discord.com/api/webhooks/1400894060276748448/qflPvLqhtoymtnU4o9br3grXkV4HJIl2WYtTAY6BQ2__D5MyAbZqpv-FsW3lEKjPcAN2"
+webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
 
 # Initialize variables with default values
 tier = "UNRANKED"
@@ -62,10 +66,13 @@ mensaje = (
 
 data = {"content": mensaje}
 
-response = requests.post(webhook_url, json=data)
-
-if response.status_code == 204:
-    print("✅ Mensaje enviado con éxito")
+if not webhook_url:
+    print("⚠️ DISCORD_WEBHOOK_URL is not set. Skipping send.")
 else:
-    print(f"❌ Error al enviar mensaje: {response.status_code}")
-    print(f"❌ Error al enviar mensaje: {response.text}")
+    response = requests.post(webhook_url, json=data)
+
+    if response.status_code == 204:
+        print("✅ Mensaje enviado con éxito")
+    else:
+        print(f"❌ Error al enviar mensaje: {response.status_code}")
+        print(f"❌ Error al enviar mensaje: {response.text}")

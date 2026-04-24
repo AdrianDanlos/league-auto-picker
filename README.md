@@ -32,6 +32,17 @@ League Auto Picker is an automation utility programm designed to enhance the Lea
    pip install -r requirements.txt
    ```
 
+3. **Configure Environment Variables**
+
+   Copy `.env.example` to `.env` and set your Discord webhook URLs:
+
+   ```
+   copy .env.example .env
+   ```
+
+   - `DISCORD_WEBHOOK_URL`: main webhook for game notifications
+   - `DISCORD_ERROR_WEBHOOK_URL`: optional separate webhook for error logs (falls back to `DISCORD_WEBHOOK_URL` if not set)
+
 ## Setup config file with your own preferences
 
 For reference check the `config.example.json` file. Once you have updated it rename it to `config.json` and you are ready to go.

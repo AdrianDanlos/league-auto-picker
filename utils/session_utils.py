@@ -76,7 +76,11 @@ def get_queueType(session):
         return "RANKED_FLEX_SR"
     elif queue_type == DRAFT_PICK_CODE:
         return "NORMAL_DRAFT"
-    return None
+    # Keep a stable non-empty value for unsupported/unknown queues so
+    # downstream Discord notifications still run.
+    if queue_type:
+        return f"QUEUE_{queue_type}"
+    return "UNKNOWN"
 
 
 def is_still_our_turn_to_pick(session, my_cell_id):
