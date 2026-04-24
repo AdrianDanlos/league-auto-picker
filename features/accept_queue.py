@@ -47,7 +47,10 @@ def accept_queue():
                         log_and_discord(
                             f"❌ Failed to accept queue: {accept.status_code} - {accept.text}"
                         )
-                        break
+                        # Don't stop the queue watcher on a transient accept failure.
+                        # Keep polling so we can still accept the next ready-check.
+                        time.sleep(1)
+                        continue
 
                     print("✅ Queue accepted!")
 
@@ -85,6 +88,17 @@ def accept_queue():
                                     f"🔄 Queue was {state.lower()}. Waiting for next queue..."
                                 )
                                 break
+                        elif r.status_code == 404:
+                            # Ready-check no longer exists (often after a dodge/timeout).
+                            # Return to outer polling so we can accept the next queue pop.
+                            print("🔄 Ready-check closed. Waiting for next queue pop...")
+                            break
+                        else:
+                            print(
+                                f"⚠️ Unexpected ready-check status while waiting: {r.status_code}. "
+                                "Returning to queue polling..."
+                            )
+                            break
 
             time.sleep(1)
         except (
