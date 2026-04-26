@@ -29,7 +29,7 @@ League Auto Picker is an automation utility programm designed to enhance the Lea
    ```
    py -m venv venv
    venv\Scripts\activate
-   pip install -r requirements.txt
+   py -m pip install -r requirements.txt
    ```
 
 3. **Configure Environment Variables**
